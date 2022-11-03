@@ -1,4 +1,6 @@
+import javafx.animation.AnimationTimer;
 import javafx.application.Application;
+import javafx.geometry.Point2D;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -29,11 +31,29 @@ public class GameApp extends Application {
         setupWindow(game, scene);
 
 
+        AnimationTimer timer = new AnimationTimer() {
+            int counter = 0;
+            double old = -1;
 
-        scene.setOnKeyPressed(e ->{
-            switch(e.getCode()){
-                case W: game.moveUp(); break;
-                case S: game.moveDown(); break;
+            @Override
+            public void handle(long nano) {
+
+
+                if (old < 0) old = nano;
+                double delta = (nano - old) / 1e9;
+
+                old = nano;
+                game.update(delta);
+
+
+            }
+        };
+
+        //if the up arrow is pressed move up
+        scene.setOnKeyPressed(e -> {
+            switch (e.getCode()) {
+                case UP: game.moveForward();
+
                 default:
 
             }
@@ -42,6 +62,7 @@ public class GameApp extends Application {
 
         scene.setFill(Color.BLACK);
         stage.setScene(scene);
+        timer.start();
         stage.show();
     }
 
@@ -77,28 +98,28 @@ class Game extends Pane {
 
     }
 
-    void moveUp() {
-        helicopter.moveUp();
+    void moveForward() {
+        helicopter.increaseHelicopterSpeed();
     }
 
-    void moveDown() {
-        helicopter.moveDown();
+    void update(double delta) {
+        helicopter.updateHelicopter(delta);
     }
 
 
 }
 
-abstract class GameObject extends Group {
+abstract class GameObject extends Group implements Updatable {
     //im pretty sure they all share an update function
     protected Translate myTranslation;
-    private Rotate myRotation;
-    private Scale myScale;
+    protected Rotate myRotation;
+    protected Scale myScale;
 
-    public GameObject(){
+    public GameObject() {
         myTranslation = new Translate();
         myRotation = new Rotate();
         myScale = new Scale();
-        this.getTransforms().addAll(myTranslation,myRotation,myScale);
+        this.getTransforms().addAll(myTranslation, myRotation, myScale);
     }
 
     public void rotate(double degrees) {
@@ -117,18 +138,16 @@ abstract class GameObject extends Group {
         myTranslation.setY(ty);
     }
 
-    public double getMyRotation(){
+    public double getMyRotation() {
         return myRotation.getAngle();
     }
 
-//    public void update(){
-//        for(Node n : getChildren()){
-//            if(n instanceof Updatable)
-//               // ((Updatable)n).update();
-//        }
-//    }
-
-
+    public void update() {
+        for (Node n : getChildren()) {
+            if (n instanceof Updatable)
+                ((Updatable) n).update();
+        }
+    }
 
 
 }
@@ -165,10 +184,15 @@ class Helipad extends GameObject {
     }
 
 
-
 }
 
 class Helicopter extends GameObject {
+    Point2D position, velocity;
+    double speed = 0.0;
+    int heading = 90;
+
+    double vx = 0.0;
+    double vy = 0.0;
 
 
     Helicopter(int fuel, int helipadCenterX, int helipadCenterY) {
@@ -181,21 +205,55 @@ class Helicopter extends GameObject {
 
         GameText fuelText = new GameText("F:" + fuel, Color.YELLOW, 175, 75);
 
+        position = new Point2D(0, 0);
+
+//        velocity = new Point2D(speed * Math.cos(heading),
+//                speed * Math.sin(heading));
+        velocity = new Point2D(0, 0);
+        // Vx = (speed) (cos(angle))
+        // Vy = (speed) (sin(angle))
         this.getChildren().addAll(base, roter, fuelText);
     }
 
-    void moveUp() {
-        myTranslation.setY(myTranslation.getY() + 1);
+    void increaseHelicopterSpeed() {
+        if (speed <= 12.0) {
+            speed += 0.1;
+        }
     }
 
-    void moveDown() {
-        myTranslation.setY(myTranslation.getY() - 1);
+    void decreaseHelicopterSpeed() {
+        if (speed <= 12.0) {
+            speed += 0.1;
+        }
     }
+
+
+    void updateHelicopter(double delta) {
+        vx = speed * Math.cos(Math.toRadians(heading));
+        vy = speed * Math.sin(Math.toRadians(heading));
+
+        velocity = velocity.add(vx, vy);
+        position = position.add(velocity.multiply(delta));
+        this.translate(position.getX(), position.getY());
+    }
+
+    // magnitude of velocity vector is its speed
+    // vector = <x, y>
+    // press w <x, y + 1>
+    // so we are given it's speed to begin with by pressing w/up
+    // .1 when it is first pressed
+    // angle(heading) is changed by pressing a and d
+    // the initial angle of the helicopter is 90
+    // assuming the speed is .1
+    // (.1)(cos90) = velocity in the x direction
+    // (.1)(sin90) = velocity in the y direction
+    // the p multiplied by the v vector moves the p vector by the changed
+    // speed and direction
 
 }
 
 interface Updatable {
-
+    void update();
 }
 
 class GameText extends GameObject {
