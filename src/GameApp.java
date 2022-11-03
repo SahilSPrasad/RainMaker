@@ -52,10 +52,18 @@ public class GameApp extends Application {
         //if the up arrow is pressed move up
         scene.setOnKeyPressed(e -> {
             switch (e.getCode()) {
-                case UP: game.moveForward(); break;
-                case DOWN: game.moveBackward(); break;
-                case RIGHT: game.moveRight(); break;
-                case LEFT: game.moveLeft(); break;
+                case UP:
+                    game.moveForward();
+                    break;
+                case DOWN:
+                    game.moveBackward();
+                    break;
+                case RIGHT:
+                    game.moveRight();
+                    break;
+                case LEFT:
+                    game.moveLeft();
+                    break;
 
                 default:
 
@@ -137,10 +145,10 @@ abstract class GameObject extends Group implements Updatable {
         this.getTransforms().addAll(myTranslation, myRotation, myScale);
     }
 
-    public void rotate(double degrees) {
+    public void rotate(double degrees, double x, double y) {
         myRotation.setAngle(degrees);
-        myRotation.setPivotX(0);
-        myRotation.setPivotY(0);
+        myRotation.setPivotX(x);
+        myRotation.setPivotY(y);
     }
 
     public void scale(double sx, double sy) {
@@ -209,9 +217,16 @@ class Helicopter extends GameObject {
     double vx = 0.0;
     double vy = 0.0;
 
+    int centerX;
+    int centerY;
+
 
     Helicopter(int fuel, int helipadCenterX, int helipadCenterY) {
-        Circle base = new Circle(helipadCenterX, helipadCenterY, 10,
+        centerX = helipadCenterX;
+        centerY = helipadCenterY;
+
+
+        Circle base = new Circle(centerX, centerY, 10,
                 Color.YELLOW);
 
         Line roter = new Line(195, 90, 195, 120);
@@ -237,34 +252,40 @@ class Helicopter extends GameObject {
     }
 
     void decreaseHelicopterSpeed() {
-        System.out.println("called");
         if (speed >= -0.2) {
             speed -= 0.1;
         }
     }
 
+
+    // we need to find the center of the helicopter object
+    // and on that center point we need to pivot the helicopter
     void moveHelicopterRight() {
-        this.rotate(getMyRotation() - 15);
+        heading -= 15;
+        this.rotate(this.getMyRotation() - 15,centerX,centerY);
     }
 
     void moveHelicopterLeft() {
-        this.rotate(getMyRotation() + 15);
+        heading += 15;
+        this.rotate(this.getMyRotation() + 15,centerX,centerY);
     }
 
 
     void updateHelicopter(double delta) {
+        double deceleration = -0.5;
+
         vx = speed * Math.cos(Math.toRadians(heading));
         vy = speed * Math.sin(Math.toRadians(heading));
 
         if (speed != 0) {
             velocity = velocity.add(vx, vy);
+        } else {
+            velocity = velocity.multiply(deceleration * delta);
         }
-        else {
-            velocity = velocity.multiply(1 - 0.2 * delta);
-        }
-        System.out.println(speed);
-        position = position.add(velocity.multiply(delta));
-        this.translate(position.getX(), position.getY());
+
+        //position = position.add(velocity.multiply(delta));
+        this.translate(velocity.getX(), velocity.getY());
+        //System.out.println(heading);
     }
 
     // magnitude of velocity vector is its speed
