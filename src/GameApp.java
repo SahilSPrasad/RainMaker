@@ -52,7 +52,10 @@ public class GameApp extends Application {
         //if the up arrow is pressed move up
         scene.setOnKeyPressed(e -> {
             switch (e.getCode()) {
-                case UP: game.moveForward();
+                case UP: game.moveForward(); break;
+                case DOWN: game.moveBackward(); break;
+                case RIGHT: game.moveRight(); break;
+                case LEFT: game.moveLeft(); break;
 
                 default:
 
@@ -100,6 +103,18 @@ class Game extends Pane {
 
     void moveForward() {
         helicopter.increaseHelicopterSpeed();
+    }
+
+    void moveBackward() {
+        helicopter.decreaseHelicopterSpeed();
+    }
+
+    void moveRight() {
+        helicopter.moveHelicopterRight();
+    }
+
+    void moveLeft() {
+        helicopter.moveHelicopterLeft();
     }
 
     void update(double delta) {
@@ -216,15 +231,24 @@ class Helicopter extends GameObject {
     }
 
     void increaseHelicopterSpeed() {
-        if (speed <= 12.0) {
+        if (speed <= 10.0) {
             speed += 0.1;
         }
     }
 
     void decreaseHelicopterSpeed() {
-        if (speed <= 12.0) {
-            speed += 0.1;
+        System.out.println("called");
+        if (speed >= -0.2) {
+            speed -= 0.1;
         }
+    }
+
+    void moveHelicopterRight() {
+        this.rotate(getMyRotation() - 15);
+    }
+
+    void moveHelicopterLeft() {
+        this.rotate(getMyRotation() + 15);
     }
 
 
@@ -232,7 +256,13 @@ class Helicopter extends GameObject {
         vx = speed * Math.cos(Math.toRadians(heading));
         vy = speed * Math.sin(Math.toRadians(heading));
 
-        velocity = velocity.add(vx, vy);
+        if (speed != 0) {
+            velocity = velocity.add(vx, vy);
+        }
+        else {
+            velocity = velocity.multiply(1 - 0.2 * delta);
+        }
+        System.out.println(speed);
         position = position.add(velocity.multiply(delta));
         this.translate(position.getX(), position.getY());
     }
