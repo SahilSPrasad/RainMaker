@@ -16,6 +16,8 @@ import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
 import javafx.stage.Stage;
 
+import java.math.BigDecimal;
+
 public class GameApp extends Application {
 
 
@@ -32,12 +34,10 @@ public class GameApp extends Application {
 
 
         AnimationTimer timer = new AnimationTimer() {
-            int counter = 0;
             double old = -1;
 
             @Override
             public void handle(long nano) {
-
 
                 if (old < 0) old = nano;
                 double delta = (nano - old) / 1e9;
@@ -52,27 +52,21 @@ public class GameApp extends Application {
         //if the up arrow is pressed move up
         scene.setOnKeyPressed(e -> {
             switch (e.getCode()) {
-                case UP:
-                    game.moveForward();
-                    break;
-                case DOWN:
-                    game.moveBackward();
-                    break;
-                case RIGHT:
-                    game.moveRight();
-                    break;
-                case LEFT:
-                    game.moveLeft();
-                    break;
-
-                default:
-
+                case UP -> game.moveForward();
+                case DOWN -> game.moveBackward();
+                case RIGHT -> game.moveRight();
+                case LEFT -> game.moveLeft();
+                case R -> game.reset();
+                case I -> game.ignition();
+                default -> {
+                }
             }
         });
 
 
         scene.setFill(Color.BLACK);
         stage.setScene(scene);
+        stage.setTitle("RainMaker");
         timer.start();
         stage.show();
     }
@@ -129,14 +123,20 @@ class Game extends Pane {
         helicopter.updateHelicopter(delta);
     }
 
+    void reset() {
+        helicopter.resetHelicopter();
+        //reset cloud
+        //reset pond
+    }
+
+    void ignition() {}
 
 }
 
 abstract class GameObject extends Group implements Updatable {
-    //im pretty sure they all share an update function
-    protected Translate myTranslation;
-    protected Rotate myRotation;
-    protected Scale myScale;
+    private final Translate myTranslation;
+    private final Rotate myRotation;
+    private final Scale myScale;
 
     public GameObject() {
         myTranslation = new Translate();
@@ -195,7 +195,6 @@ class Cloud extends GameObject {
 
 class Helipad extends GameObject {
 
-
     Helipad(int padCenterX, int padCenterY) {
         Rectangle border = new Rectangle(145, 40, 100, 100);
         border.setStroke(Color.WHITE);
@@ -206,26 +205,29 @@ class Helipad extends GameObject {
         this.getChildren().addAll(border, pad);
     }
 
-
 }
 
 class Helicopter extends GameObject {
-    Point2D position, velocity;
-    double speed = 0.0;
-    int heading = 90;
+    Point2D velocity;
 
+    // Using BigDecimal here because double didn't have precise arithmetic
+    BigDecimal speed = BigDecimal.valueOf(0);
+    BigDecimal changeSpeed = BigDecimal.valueOf(0.1);
     double vx = 0.0;
     double vy = 0.0;
 
+    int heading = 90;
     int centerX;
     int centerY;
+    int fuel;
+
+    boolean ignition = false;
 
 
     Helicopter(int fuel, int helipadCenterX, int helipadCenterY) {
+        this.fuel = fuel;
         centerX = helipadCenterX;
         centerY = helipadCenterY;
-
-
         Circle base = new Circle(centerX, centerY, 10,
                 Color.YELLOW);
 
@@ -235,57 +237,52 @@ class Helicopter extends GameObject {
 
         GameText fuelText = new GameText("F:" + fuel, Color.YELLOW, 175, 75);
 
-        position = new Point2D(0, 0);
-
-//        velocity = new Point2D(speed * Math.cos(heading),
-//                speed * Math.sin(heading));
         velocity = new Point2D(0, 0);
-        // Vx = (speed) (cos(angle))
-        // Vy = (speed) (sin(angle))
+
         this.getChildren().addAll(base, roter, fuelText);
     }
 
     void increaseHelicopterSpeed() {
-        if (speed <= 10.0) {
-            speed += 0.1;
+        if (speed.doubleValue() < 10.0) {
+           speed = speed.add(changeSpeed);
         }
     }
 
     void decreaseHelicopterSpeed() {
-        if (speed >= -0.2) {
-            speed -= 0.1;
+        if (speed.doubleValue() > -2) {
+            speed = speed.subtract(changeSpeed);
         }
     }
+
+
 
 
     // we need to find the center of the helicopter object
     // and on that center point we need to pivot the helicopter
     void moveHelicopterRight() {
         heading -= 15;
-        this.rotate(this.getMyRotation() - 15,centerX,centerY);
+        this.rotate(this.getMyRotation() - 15, centerX, centerY);
     }
 
     void moveHelicopterLeft() {
         heading += 15;
-        this.rotate(this.getMyRotation() + 15,centerX,centerY);
+        this.rotate(this.getMyRotation() + 15, centerX, centerY);
     }
 
 
     void updateHelicopter(double delta) {
-        double deceleration = -0.5;
 
-        vx = speed * Math.cos(Math.toRadians(heading));
-        vy = speed * Math.sin(Math.toRadians(heading));
+        vx = speed.doubleValue() * Math.cos(Math.toRadians(heading));
+        vy = speed.doubleValue() * Math.sin(Math.toRadians(heading));
 
-        if (speed != 0) {
+        if (speed.doubleValue() != 0) {
             velocity = velocity.add(vx, vy);
         } else {
-            velocity = velocity.multiply(deceleration * delta);
+            velocity = velocity.multiply(1 - 0.2 * delta);
         }
 
-        //position = position.add(velocity.multiply(delta));
         this.translate(velocity.getX(), velocity.getY());
-        //System.out.println(heading);
+        //System.out.println(speed);
     }
 
     // magnitude of velocity vector is its speed
@@ -300,6 +297,16 @@ class Helicopter extends GameObject {
     // (.1)(sin90) = velocity in the y direction
     // the p multiplied by the v vector moves the p vector by the changed
     // speed and direction
+    // Vx = (speed) (cos(angle))
+    // Vy = (speed) (sin(angle))
+
+
+    void resetHelicopter() {
+        velocity = new Point2D(0, 0);
+        heading = 90;
+        speed = BigDecimal.valueOf(0);
+        this.rotate(getMyRotation() - getMyRotation(),centerX,centerY);
+    }
 
 }
 
