@@ -31,7 +31,7 @@ public class GameApp extends Application {
         Game game = new Game();
         Scene scene = new Scene(game, GAME_WIDTH, GAME_HEIGHT);
         setupWindow(game, scene);
-
+        game.showBounds();
 
         AnimationTimer timer = new AnimationTimer() {
             double old = -1;
@@ -44,6 +44,7 @@ public class GameApp extends Application {
 
                 old = nano;
                 game.update(delta);
+                game.updateBoundingBoxes();
 
 
             }
@@ -91,6 +92,7 @@ class Game extends Pane {
     Helipad helipad = new Helipad(helipadCenterX, helipadCenterY);
     Helicopter helicopter = new Helicopter(fuel, helipadCenterX,
             helipadCenterY);
+    Rectangle helicopterBounds = new Rectangle();
 
     Game() {
         createGameObjects();
@@ -99,7 +101,8 @@ class Game extends Pane {
 
     void createGameObjects() {
 
-        this.getChildren().addAll(pond, cloud, helipad, helicopter);
+        this.getChildren().addAll(pond, cloud, helipad, helicopter,
+                helicopterBounds);
 
     }
 
@@ -129,7 +132,41 @@ class Game extends Pane {
         //reset pond
     }
 
-    void ignition() {}
+    void ignition() {
+        helicopter.toggleIgnition();
+    }
+
+    void showBounds() {
+
+
+        // center x - 1/2 width = x
+        // center y - 1/2 height = y
+    }
+
+    void updateBoundingBoxes() {
+        helicopterBounds.setFill(Color.TRANSPARENT);
+        helicopterBounds.setStroke(Color.YELLOW);
+
+        double helicopterBoundX =
+                helicopter.getBoundsInLocal().getCenterX() - (helicopter.getBoundsInLocal().getWidth() / 2);
+        double helicopterBoundY =
+                helicopter.getBoundsInLocal().getCenterY() - (helicopter.getBoundsInLocal().getHeight() / 2);
+        //System.out.println(helicopter.getBoundsInLocal().getCenterX());
+        //System.out.println(helicopterBoundY);
+
+
+
+        double helicopterBoundWidth = helicopter.getBoundsInLocal().getWidth();
+        double helicopterBoundHeight =
+                helicopter.getBoundsInLocal().getHeight();
+
+        helicopterBounds.setTranslateX(helicopterBoundX);
+        helicopterBounds.setTranslateY(helicopterBoundY);
+        helicopterBounds.setWidth(helicopterBoundWidth);
+        helicopterBounds.setHeight(helicopterBoundHeight);
+
+    }
+
 
 }
 
@@ -209,6 +246,8 @@ class Helipad extends GameObject {
 
 class Helicopter extends GameObject {
     Point2D velocity;
+    Rectangle bounds;
+    GameText fuelText;
 
     // Using BigDecimal here because double didn't have precise arithmetic
     BigDecimal speed = BigDecimal.valueOf(0);
@@ -235,38 +274,46 @@ class Helicopter extends GameObject {
         roter.setStroke(Color.YELLOW);
         roter.setStrokeWidth(2);
 
-        GameText fuelText = new GameText("F:" + fuel, Color.YELLOW, 175, 75);
+        fuelText = new GameText("F:" + fuel, Color.YELLOW, 175, 75);
 
         velocity = new Point2D(0, 0);
+//        bounds = new Rectangle(50, 50);
+//        bounds.setX(50);
+//        bounds.setY(50);
+//        bounds.setStroke(Color.YELLOW);
+
 
         this.getChildren().addAll(base, roter, fuelText);
     }
 
     void increaseHelicopterSpeed() {
-        if (speed.doubleValue() < 10.0) {
-           speed = speed.add(changeSpeed);
+        if (speed.doubleValue() < 10.0 && ignition) {
+            speed = speed.add(changeSpeed);
         }
     }
 
     void decreaseHelicopterSpeed() {
-        if (speed.doubleValue() > -2) {
+        if (speed.doubleValue() > -2 && ignition) {
             speed = speed.subtract(changeSpeed);
         }
     }
 
 
-
-
     // we need to find the center of the helicopter object
     // and on that center point we need to pivot the helicopter
     void moveHelicopterRight() {
-        heading -= 15;
-        this.rotate(this.getMyRotation() - 15, centerX, centerY);
+        if (ignition && speed.doubleValue() > 0) {
+            heading -= 15;
+            this.rotate(this.getMyRotation() - 15, centerX, centerY);
+        }
+
     }
 
     void moveHelicopterLeft() {
-        heading += 15;
-        this.rotate(this.getMyRotation() + 15, centerX, centerY);
+        if (ignition && speed.doubleValue() > 0) {
+            heading += 15;
+            this.rotate(this.getMyRotation() + 15, centerX, centerY);
+        }
     }
 
 
@@ -275,10 +322,13 @@ class Helicopter extends GameObject {
         vx = speed.doubleValue() * Math.cos(Math.toRadians(heading));
         vy = speed.doubleValue() * Math.sin(Math.toRadians(heading));
 
-        if (speed.doubleValue() != 0) {
-            velocity = velocity.add(vx, vy);
-        } else {
-            velocity = velocity.multiply(1 - 0.2 * delta);
+        if (ignition) {
+            if (speed.doubleValue() != 0) {
+                velocity = velocity.add(vx, vy);
+            } else {
+                velocity = velocity.multiply(1 - 0.2 * delta);
+            }
+            updateFuel();
         }
 
         this.translate(velocity.getX(), velocity.getY());
@@ -302,12 +352,38 @@ class Helicopter extends GameObject {
 
 
     void resetHelicopter() {
+        fuel = 25000;
+        fuelText.setGameText("F:" + fuel);
         velocity = new Point2D(0, 0);
         heading = 90;
         speed = BigDecimal.valueOf(0);
-        this.rotate(getMyRotation() - getMyRotation(),centerX,centerY);
+        ignition = false;
+
+        this.rotate(getMyRotation() - getMyRotation(), centerX, centerY);
     }
 
+    void toggleIgnition() {
+        if (!ignition && speed.doubleValue() == 0.0) {
+            ignition = true;
+            System.out.println("ignition on");
+        }
+
+        //if the helictoper is on the helipad and not moving
+        // be able to turn off the ignition
+    }
+
+    void updateFuel() {
+        if (ignition) {
+
+            if (speed.doubleValue() <= 0) {
+                fuel -= .01;
+            } else
+                fuel -= 5 * speed.doubleValue();
+
+            //System.out.println(fuel);
+            fuelText.setGameText("F:" + fuel);
+        }
+    }
 }
 
 interface Updatable {
@@ -326,10 +402,18 @@ class GameText extends GameObject {
 
         this.getChildren().add(gameText);
     }
+
+    void setGameText(String text) {
+        gameText.setText(text);
+    }
 }
 
 // 10-25-2022
 // TODO:create helicopter object
 //  be able to move it up and down
+
+// 11-06-2022
+// TODO: add fuel to helicopter object
+//  create stop logic
 
 
