@@ -31,28 +31,18 @@ public class GameApp extends Application {
         Game game = new Game();
         Scene scene = new Scene(game, GAME_WIDTH, GAME_HEIGHT);
         setupWindow(game, scene);
-        game.showBounds();
 
         AnimationTimer timer = new AnimationTimer() {
-            double old = -1;
+
 
             @Override
             public void handle(long nano) {
-
-                if (old < 0) old = nano;
-                double delta = (nano - old) / 1e9;
-
-                old = nano;
-                //game.update(delta);
-                //game.updateBoundingBoxes();
-
+                game.updateHeliBounds();
 
                 for (Node n : game.getChildren()) {
                     if (n instanceof Updatable)
                         ((Updatable) n).update();
                 }
-
-
             }
         };
 
@@ -65,6 +55,7 @@ public class GameApp extends Application {
                 case LEFT -> game.moveLeft();
                 case R -> game.reset();
                 case I -> game.ignition();
+                case B -> game.toggleBoundVisibility();
                 default -> {
                 }
             }
@@ -98,7 +89,10 @@ class Game extends Pane {
     Helipad helipad = new Helipad(helipadCenterX, helipadCenterY);
     Helicopter helicopter = new Helicopter(fuel, helipadCenterX,
             helipadCenterY);
+
+    private boolean toggleBounds = false;
     Rectangle helicopterBounds = new Rectangle();
+
 
     Game() {
         createGameObjects();
@@ -106,6 +100,7 @@ class Game extends Pane {
 
 
     void createGameObjects() {
+        helicopterBounds.setVisible(false);
 
         this.getChildren().addAll(pond, cloud, helipad, helicopter,
                 helicopterBounds);
@@ -138,36 +133,35 @@ class Game extends Pane {
         helicopter.toggleIgnition();
     }
 
-    void showBounds() {
+
+    void toggleBoundVisibility() {
+        toggleBounds= !toggleBounds;
+        helicopterBounds.setVisible(toggleBounds);
+    }
+
+
+    void updateHeliBounds() {
+        helicopterBounds.setFill(Color.TRANSPARENT);
+        helicopterBounds.setStroke(Color.YELLOW);
 
 
         // center x - 1/2 width = x
         // center y - 1/2 height = y
-    }
-
-    void updateBoundingBoxes() {
-        helicopterBounds.setFill(Color.TRANSPARENT);
-        helicopterBounds.setStroke(Color.YELLOW);
-
         double helicopterBoundX =
-                helicopter.getBoundsInLocal().getCenterX() - (helicopter.getBoundsInLocal().getWidth() / 2);
+                helicopter.getBoundsInParent().getCenterX() - (helicopter.getBoundsInParent().getWidth() / 2);
         double helicopterBoundY =
-                helicopter.getBoundsInLocal().getCenterY() - (helicopter.getBoundsInLocal().getHeight() / 2);
-        //System.out.println(helicopter.getBoundsInLocal().getCenterX());
-        //System.out.println(helicopterBoundY);
+                helicopter.getBoundsInParent().getCenterY() - (helicopter.getBoundsInParent().getHeight() / 2);
 
 
-
-        double helicopterBoundWidth = helicopter.getBoundsInLocal().getWidth();
+        double helicopterBoundWidth = helicopter.getBoundsInParent().getWidth();
         double helicopterBoundHeight =
-                helicopter.getBoundsInLocal().getHeight();
+                helicopter.getBoundsInParent().getHeight();
+
 
         helicopterBounds.setTranslateX(helicopterBoundX);
         helicopterBounds.setTranslateY(helicopterBoundY);
         helicopterBounds.setWidth(helicopterBoundWidth);
         helicopterBounds.setHeight(helicopterBoundHeight);
-        helicopterBounds.setVisible(false);
-
     }
 
 
@@ -206,8 +200,6 @@ abstract class GameObject extends Group implements Updatable {
     }
 
 
-
-
 }
 
 class Pond extends GameObject {
@@ -217,7 +209,9 @@ class Pond extends GameObject {
         this.getChildren().add(pond);
     }
 
-    public void update() {};
+    public void update() {
+    }
+
 
 }
 
@@ -228,7 +222,9 @@ class Cloud extends GameObject {
         this.getChildren().add(cloud);
     }
 
-    public void update() {};
+    public void update() {
+    }
+
 
 }
 
@@ -243,14 +239,13 @@ class Helipad extends GameObject {
 
         this.getChildren().addAll(border, pad);
     }
-    public void update() {};
 
-
+    public void update() {
+    }
 }
 
 class Helicopter extends GameObject {
     Point2D velocity;
-    Rectangle bounds;
     GameText fuelText;
 
     // Using BigDecimal here because double didn't have precise arithmetic
@@ -281,11 +276,6 @@ class Helicopter extends GameObject {
         fuelText = new GameText("F:" + fuel, Color.YELLOW, 175, 75);
 
         velocity = new Point2D(0, 0);
-//        bounds = new Rectangle(50, 50);
-//        bounds.setX(50);
-//        bounds.setY(50);
-//        bounds.setStroke(Color.YELLOW);
-
 
         this.getChildren().addAll(base, roter, fuelText);
     }
@@ -320,8 +310,7 @@ class Helicopter extends GameObject {
         }
     }
 
-
-    public void update() {
+    void updateHelicopter() {
         vx = speed.doubleValue() * Math.cos(Math.toRadians(heading));
         vy = speed.doubleValue() * Math.sin(Math.toRadians(heading));
 
@@ -329,13 +318,13 @@ class Helicopter extends GameObject {
             if (speed.doubleValue() != 0) {
                 velocity = velocity.add(vx, vy);
             } else {
+                //fix this
                 velocity = velocity.multiply(1 - 0.2);
             }
             updateFuel();
         }
 
         this.translate(velocity.getX(), velocity.getY());
-        //System.out.println(speed);
     }
 
     // magnitude of velocity vector is its speed
@@ -387,6 +376,14 @@ class Helicopter extends GameObject {
             fuelText.setGameText("F:" + fuel);
         }
     }
+
+
+    public void update() {
+        this.updateBounds();
+        updateHelicopter();
+
+    }
+
 }
 
 interface Updatable {
@@ -411,7 +408,8 @@ class GameText extends GameObject {
     }
 
 
-    public void update() {};
+    public void update() {
+    }
 }
 
 // 10-25-2022
