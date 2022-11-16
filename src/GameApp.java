@@ -1,5 +1,6 @@
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
+import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -20,13 +21,11 @@ import java.math.BigDecimal;
 
 public class GameApp extends Application {
 
-
     private final static int GAME_HEIGHT = 800;
     private final static int GAME_WIDTH = 400;
 
     @Override
     public void start(Stage stage) {
-
 
         Game game = new Game();
         Scene scene = new Scene(game, GAME_WIDTH, GAME_HEIGHT);
@@ -34,10 +33,9 @@ public class GameApp extends Application {
 
         AnimationTimer timer = new AnimationTimer() {
 
-
             @Override
             public void handle(long nano) {
-                game.updateHeliBounds();
+                game.updateGameBounds();
 
                 for (Node n : game.getChildren()) {
                     if (n instanceof Updatable)
@@ -61,14 +59,12 @@ public class GameApp extends Application {
             }
         });
 
-
         scene.setFill(Color.BLACK);
         stage.setScene(scene);
         stage.setTitle("RainMaker");
         timer.start();
         stage.show();
     }
-
 
     public static void main(String[] args) {
         launch(args);
@@ -92,18 +88,17 @@ class Game extends Pane {
 
     private boolean toggleBounds = false;
     Rectangle helicopterBounds = new Rectangle();
-
+    Rectangle helipadBounds = new Rectangle();
+    Rectangle cloudBounds = new Rectangle();
 
     Game() {
+        initializeBounds();
         createGameObjects();
     }
 
-
     void createGameObjects() {
-        helicopterBounds.setVisible(false);
-
         this.getChildren().addAll(pond, cloud, helipad, helicopter,
-                helicopterBounds);
+                helicopterBounds, helipadBounds, cloudBounds);
 
     }
 
@@ -133,38 +128,41 @@ class Game extends Pane {
         helicopter.toggleIgnition();
     }
 
+    void initializeBounds() {
+        modifyBounds(helicopterBounds);
+        modifyBounds(helipadBounds);
+        modifyBounds(cloudBounds);
+    }
+
+    void modifyBounds(Rectangle bound) {
+        bound.setFill(Color.TRANSPARENT);
+        bound.setStroke(Color.YELLOW);
+        bound.setVisible(false);
+    }
+
+    void translateBounds(Rectangle bound, Bounds boundsInParent) {
+        bound.setHeight(boundsInParent.getHeight());
+        bound.setWidth(boundsInParent.getWidth());
+        double x =
+                boundsInParent.getCenterX() - (boundsInParent.getWidth() / 2);
+        double y =
+                boundsInParent.getCenterY() - (boundsInParent.getHeight() / 2);
+        bound.setTranslateX(x);
+        bound.setTranslateY(y);
+    }
 
     void toggleBoundVisibility() {
-        toggleBounds= !toggleBounds;
+        toggleBounds = !toggleBounds;
         helicopterBounds.setVisible(toggleBounds);
+        helipadBounds.setVisible(toggleBounds);
+        cloudBounds.setVisible(toggleBounds);
     }
 
-
-    void updateHeliBounds() {
-        helicopterBounds.setFill(Color.TRANSPARENT);
-        helicopterBounds.setStroke(Color.YELLOW);
-
-
-        // center x - 1/2 width = x
-        // center y - 1/2 height = y
-        double helicopterBoundX =
-                helicopter.getBoundsInParent().getCenterX() - (helicopter.getBoundsInParent().getWidth() / 2);
-        double helicopterBoundY =
-                helicopter.getBoundsInParent().getCenterY() - (helicopter.getBoundsInParent().getHeight() / 2);
-
-
-        double helicopterBoundWidth = helicopter.getBoundsInParent().getWidth();
-        double helicopterBoundHeight =
-                helicopter.getBoundsInParent().getHeight();
-
-
-        helicopterBounds.setTranslateX(helicopterBoundX);
-        helicopterBounds.setTranslateY(helicopterBoundY);
-        helicopterBounds.setWidth(helicopterBoundWidth);
-        helicopterBounds.setHeight(helicopterBoundHeight);
+    void updateGameBounds() {
+        translateBounds(helicopterBounds, helicopter.getBoundsInParent());
+        translateBounds(helipadBounds, helipad.getBoundsInParent());
+        translateBounds(cloudBounds, cloud.getBoundsInParent());
     }
-
-
 }
 
 abstract class GameObject extends Group implements Updatable {
