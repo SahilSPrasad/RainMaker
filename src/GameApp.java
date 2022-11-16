@@ -43,8 +43,14 @@ public class GameApp extends Application {
                 double delta = (nano - old) / 1e9;
 
                 old = nano;
-                game.update(delta);
-                game.updateBoundingBoxes();
+                //game.update(delta);
+                //game.updateBoundingBoxes();
+
+
+                for (Node n : game.getChildren()) {
+                    if (n instanceof Updatable)
+                        ((Updatable) n).update();
+                }
 
 
             }
@@ -122,10 +128,6 @@ class Game extends Pane {
         helicopter.moveHelicopterLeft();
     }
 
-    void update(double delta) {
-        helicopter.updateHelicopter(delta);
-    }
-
     void reset() {
         helicopter.resetHelicopter();
         //reset cloud
@@ -164,6 +166,7 @@ class Game extends Pane {
         helicopterBounds.setTranslateY(helicopterBoundY);
         helicopterBounds.setWidth(helicopterBoundWidth);
         helicopterBounds.setHeight(helicopterBoundHeight);
+        helicopterBounds.setVisible(false);
 
     }
 
@@ -202,12 +205,7 @@ abstract class GameObject extends Group implements Updatable {
         return myRotation.getAngle();
     }
 
-    public void update() {
-        for (Node n : getChildren()) {
-            if (n instanceof Updatable)
-                ((Updatable) n).update();
-        }
-    }
+
 
 
 }
@@ -219,6 +217,8 @@ class Pond extends GameObject {
         this.getChildren().add(pond);
     }
 
+    public void update() {};
+
 }
 
 class Cloud extends GameObject {
@@ -227,6 +227,8 @@ class Cloud extends GameObject {
         Circle cloud = new Circle(100, 500, 30, Color.WHITE);
         this.getChildren().add(cloud);
     }
+
+    public void update() {};
 
 }
 
@@ -241,6 +243,8 @@ class Helipad extends GameObject {
 
         this.getChildren().addAll(border, pad);
     }
+    public void update() {};
+
 
 }
 
@@ -317,8 +321,7 @@ class Helicopter extends GameObject {
     }
 
 
-    void updateHelicopter(double delta) {
-
+    public void update() {
         vx = speed.doubleValue() * Math.cos(Math.toRadians(heading));
         vy = speed.doubleValue() * Math.sin(Math.toRadians(heading));
 
@@ -326,7 +329,7 @@ class Helicopter extends GameObject {
             if (speed.doubleValue() != 0) {
                 velocity = velocity.add(vx, vy);
             } else {
-                velocity = velocity.multiply(1 - 0.2 * delta);
+                velocity = velocity.multiply(1 - 0.2);
             }
             updateFuel();
         }
@@ -406,6 +409,9 @@ class GameText extends GameObject {
     void setGameText(String text) {
         gameText.setText(text);
     }
+
+
+    public void update() {};
 }
 
 // 10-25-2022
