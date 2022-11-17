@@ -137,9 +137,11 @@ class Game extends Pane {
     }
 
     void updateCloud() {
-        if (cloud.getBoundsInParent().contains(helicopter.getBoundsInParent())) {
+        if (cloud.getBoundsInParent().contains(helicopter.getBoundsInParent
+         ())) {
             cloud.seedCloud();
         }
+
     }
 
 
@@ -237,10 +239,13 @@ class Pond extends GameObject {
 
 class Cloud extends GameObject {
     int seedPercentage = 0;
+    double opacity = 1;
+    Circle cloud;
     private GameText cloudSeedText;
 
     Cloud() {
-        Circle cloud = new Circle(100, 500, 50, Color.WHITE);
+        cloud = new Circle(100, 500, 50, Color.WHITE);
+        cloud.setOpacity(opacity);
         cloudSeedText = new GameText(seedPercentage + "%", Color.BLACK,
                 (int) cloud.getCenterX() - 5,
                 (int) cloud.getCenterY() + 5);
@@ -248,13 +253,22 @@ class Cloud extends GameObject {
     }
 
     void seedCloud() {
-        if (seedPercentage < 100) seedPercentage++;
-        System.out.println(seedPercentage);
+        if (seedPercentage < 100) {
+            seedPercentage++;
+
+            if (seedPercentage > 75  && opacity > .6) {
+                opacity-= 0.1;
+            }
+        }
+        System.out.println(opacity);
+        //System.out.println(seedPercentage);
+        cloud.setOpacity(opacity);
         cloudSeedText.setGameText(seedPercentage + "%");
     }
 
     void resetCloud() {
         seedPercentage = 0;
+        cloud.setOpacity(1);
         cloudSeedText.setGameText(seedPercentage + "%");
     }
 
@@ -329,7 +343,7 @@ class Helicopter extends GameObject {
     // we need to find the center of the helicopter object
     // and on that center point we need to pivot the helicopter
     void moveHelicopterRight() {
-        if (ignition && speed.doubleValue() > 0) {
+        if (ignition && speed.doubleValue() != 0) {
             heading -= 15;
             this.rotate(this.getMyRotation() - 15, centerX, centerY);
         }
@@ -337,7 +351,7 @@ class Helicopter extends GameObject {
     }
 
     void moveHelicopterLeft() {
-        if (ignition && speed.doubleValue() > 0) {
+        if (ignition && speed.doubleValue() != 0) {
             heading += 15;
             this.rotate(this.getMyRotation() + 15, centerX, centerY);
         }
