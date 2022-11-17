@@ -32,14 +32,18 @@ public class GameApp extends Application {
         setupWindow(game, scene);
 
         AnimationTimer timer = new AnimationTimer() {
-
+            double old = -1;
             @Override
             public void handle(long nano) {
+                if (old < 0) old = nano;
+                double delta = (nano - old) / 1e9;
+                old = nano;
+
                 game.updateGameBounds();
 
                 for (Node n : game.getChildren()) {
                     if (n instanceof Updatable)
-                        ((Updatable) n).update();
+                        ((Updatable) n).update(delta);
                 }
             }
         };
@@ -125,7 +129,9 @@ class Game extends Pane {
     }
 
     void ignition() {
-        helicopter.toggleIgnition();
+        if (helipad.getBoundsInParent().contains(helicopter.getBoundsInParent())) {
+            helicopter.toggleIgnition();
+        }
     }
 
     void initializeBounds() {
@@ -196,8 +202,6 @@ abstract class GameObject extends Group implements Updatable {
     public double getMyRotation() {
         return myRotation.getAngle();
     }
-
-
 }
 
 class Pond extends GameObject {
@@ -207,10 +211,8 @@ class Pond extends GameObject {
         this.getChildren().add(pond);
     }
 
-    public void update() {
+    public void update(double delta) {
     }
-
-
 }
 
 class Cloud extends GameObject {
@@ -220,10 +222,8 @@ class Cloud extends GameObject {
         this.getChildren().add(cloud);
     }
 
-    public void update() {
+    public void update(double delta) {
     }
-
-
 }
 
 class Helipad extends GameObject {
@@ -238,7 +238,7 @@ class Helipad extends GameObject {
         this.getChildren().addAll(border, pad);
     }
 
-    public void update() {
+    public void update(double delta) {
     }
 }
 
@@ -290,7 +290,6 @@ class Helicopter extends GameObject {
         }
     }
 
-
     // we need to find the center of the helicopter object
     // and on that center point we need to pivot the helicopter
     void moveHelicopterRight() {
@@ -308,7 +307,7 @@ class Helicopter extends GameObject {
         }
     }
 
-    void updateHelicopter() {
+    void updateHelicopter(double delta) {
         vx = speed.doubleValue() * Math.cos(Math.toRadians(heading));
         vy = speed.doubleValue() * Math.sin(Math.toRadians(heading));
 
@@ -317,7 +316,7 @@ class Helicopter extends GameObject {
                 velocity = velocity.add(vx, vy);
             } else {
                 //fix this
-                velocity = velocity.multiply(1 - 0.2);
+                velocity = velocity.multiply(1 - 0.8 * delta);
             }
             updateFuel();
         }
@@ -353,12 +352,11 @@ class Helicopter extends GameObject {
     }
 
     void toggleIgnition() {
-        if (!ignition && speed.doubleValue() == 0.0) {
-            ignition = true;
-            System.out.println("ignition on");
+        if (speed.doubleValue() == 0.0) {
+            ignition = !ignition;
         }
 
-        //if the helictoper is on the helipad and not moving
+        //if the helicopter is on the helipad and not moving(velocity = 0)
         // be able to turn off the ignition
     }
 
@@ -375,17 +373,15 @@ class Helicopter extends GameObject {
         }
     }
 
-
-    public void update() {
+    public void update(double delta) {
         this.updateBounds();
-        updateHelicopter();
+        updateHelicopter(delta);
 
     }
-
 }
 
 interface Updatable {
-    void update();
+    void update(double delta);
 }
 
 class GameText extends GameObject {
@@ -406,7 +402,7 @@ class GameText extends GameObject {
     }
 
 
-    public void update() {
+    public void update(double delta) {
     }
 }
 
