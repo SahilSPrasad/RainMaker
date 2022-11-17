@@ -33,6 +33,7 @@ public class GameApp extends Application {
 
         AnimationTimer timer = new AnimationTimer() {
             double old = -1;
+
             @Override
             public void handle(long nano) {
                 if (old < 0) old = nano;
@@ -58,6 +59,7 @@ public class GameApp extends Application {
                 case R -> game.reset();
                 case I -> game.ignition();
                 case B -> game.toggleBoundVisibility();
+                case SPACE -> game.updateCloud();
                 default -> {
                 }
             }
@@ -124,7 +126,7 @@ class Game extends Pane {
 
     void reset() {
         helicopter.resetHelicopter();
-        //reset cloud
+        cloud.resetCloud();
         //reset pond
     }
 
@@ -133,6 +135,13 @@ class Game extends Pane {
             helicopter.toggleIgnition();
         }
     }
+
+    void updateCloud() {
+        if (cloud.getBoundsInParent().contains(helicopter.getBoundsInParent())) {
+            cloud.seedCloud();
+        }
+    }
+
 
     void initializeBounds() {
         modifyBounds(helicopterBounds);
@@ -205,10 +214,21 @@ abstract class GameObject extends Group implements Updatable {
 }
 
 class Pond extends GameObject {
+    int waterPercentage = 0;
+    private final GameText waterAmountText;
 
     Pond() {
         Circle pond = new Circle(50, 600, 15, Color.BLUE);
-        this.getChildren().add(pond);
+        waterAmountText = new GameText(waterPercentage + "%", Color.WHITE,
+                (int) pond.getCenterX() - 5,
+                (int) pond.getCenterY() + 5);
+        this.getChildren().addAll(pond, waterAmountText);
+    }
+
+    void increaseWaterAmount() {
+        waterPercentage++;
+        waterAmountText.setGameText(waterPercentage + "%");
+        this.scale(1, 1);
     }
 
     public void update(double delta) {
@@ -216,10 +236,26 @@ class Pond extends GameObject {
 }
 
 class Cloud extends GameObject {
+    int seedPercentage = 0;
+    private GameText cloudSeedText;
 
     Cloud() {
-        Circle cloud = new Circle(100, 500, 30, Color.WHITE);
-        this.getChildren().add(cloud);
+        Circle cloud = new Circle(100, 500, 50, Color.WHITE);
+        cloudSeedText = new GameText(seedPercentage + "%", Color.BLACK,
+                (int) cloud.getCenterX() - 5,
+                (int) cloud.getCenterY() + 5);
+        this.getChildren().addAll(cloud, cloudSeedText);
+    }
+
+    void seedCloud() {
+        if (seedPercentage < 100) seedPercentage++;
+        System.out.println(seedPercentage);
+        cloudSeedText.setGameText(seedPercentage + "%");
+    }
+
+    void resetCloud() {
+        seedPercentage = 0;
+        cloudSeedText.setGameText(seedPercentage + "%");
     }
 
     public void update(double delta) {
