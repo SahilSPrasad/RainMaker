@@ -144,6 +144,7 @@ class Game extends Pane {
 //         ())) {
             cloud.seedCloud();
 
+
     }
 
 
@@ -218,40 +219,54 @@ abstract class GameObject extends Group implements Updatable {
 }
 
 class Pond extends GameObject {
-    int waterPercentage = 0;
+    private double waterPercentage;
     private final GameText waterAmountText;
+    double scaleX;
+    double scaleY;
+    Circle pond;
 
     Pond() {
-        Circle pond = new Circle(50, 600, 15, Color.BLUE);
-        waterAmountText = new GameText(waterPercentage + "%", Color.WHITE,
+        pond = new Circle(50, 600, 15, Color.BLUE);
+        this.waterPercentage = 0.0;
+        this.scaleX = 1.0;
+        this.scaleY = 1.0;
+        waterAmountText = new GameText((int) waterPercentage + "%", Color.WHITE,
                 (int) pond.getCenterX() - 5,
                 (int) pond.getCenterY() + 5);
         this.getChildren().addAll(pond, waterAmountText);
     }
 
-    void increaseWaterAmount() {
-        waterPercentage++;
-        waterAmountText.setGameText(waterPercentage + "%");
-        this.scale(1, 1);
+    void increaseWaterAmount(double delta) {
+        if (Cloud.getSeedPercentage() > 30 && waterPercentage < 100) {
+            scaleX += delta * .10;
+            scaleY += delta * .10;
+
+            waterPercentage = waterPercentage + delta * 2;
+            waterAmountText.setGameText((int) waterPercentage + "%");
+            pond.setScaleX(scaleX);
+            pond.setScaleY(scaleY);
+
+        }
     }
 
     public void update(double delta) {
+        increaseWaterAmount(delta);
     }
 }
 
 class Cloud extends GameObject {
-    int seedPercentage = 0;
+    static private double seedPercentage = 0;
     Color cloudColor;
 
     Circle cloud;
     int r, g, b;
-    private GameText cloudSeedText;
+    private final GameText cloudSeedText;
 
     Cloud() {
         this.r = 255;
         this.g = 255;
         this.b = 255;
-        cloudColor = Color.rgb(250,250,250);
+        cloudColor = Color.rgb(250, 250, 250);
         cloud = new Circle(100, 500, 50, Color.WHITE);
         cloudSeedText = new GameText(seedPercentage + "%", Color.BLACK,
                 (int) cloud.getCenterX() - 5,
@@ -262,30 +277,48 @@ class Cloud extends GameObject {
     void seedCloud() {
         if (seedPercentage < 100) {
             seedPercentage++;
-            r-= 2;
-            g-= 2;
-            b-= 2;
-            cloudColor = Color.rgb(r,g,b);
+            r -= 2;
+            g -= 2;
+            b -= 2;
+            cloudColor = Color.rgb(r, g, b);
             cloud.setFill(cloudColor);
             cloud.setStroke(cloudColor);
         }
-        //System.out.println(opacity);
-        //System.out.println(seedPercentage);
-        //cloud.setOpacity(opacity);
-        cloudSeedText.setGameText(seedPercentage + "%");
     }
 
     void resetCloud() {
         seedPercentage = 0;
-        cloud.setOpacity(1);
+        cloudColor = Color.rgb(250, 250, 250);
+        r = 255;
+        g = 255;
+        b = 255;
+        cloud.setFill(cloudColor);
         cloudSeedText.setGameText(seedPercentage + "%");
     }
 
     public void update(double delta) {
-//        if (seedPercentage >= 0) {
-//            seedPercentage = seedPercentage / 2;
-//        }
+        double prev = seedPercentage;
+
+        if (seedPercentage > 0) {
+            seedPercentage = seedPercentage - delta;
+
+            cloudColor = Color.rgb(r, g, b);
+            cloud.setFill(cloudColor);
+        }
+
+        if ((int) seedPercentage < (int) prev && r < 255) {
+            r += 2;
+            g += 2;
+            b += 2;
+        }
+
+        cloudSeedText.setGameText((int) seedPercentage + "%");
     }
+
+    static int getSeedPercentage() {
+        return (int) seedPercentage;
+    }
+
 }
 
 class Helipad extends GameObject {
