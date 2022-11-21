@@ -108,6 +108,9 @@ class Game extends Pane {
 
     }
 
+    //add init method
+    //clear
+
     void moveForward() {
         helicopter.increaseHelicopterSpeed();
     }
@@ -137,10 +140,9 @@ class Game extends Pane {
     }
 
     void updateCloud() {
-        if (cloud.getBoundsInParent().contains(helicopter.getBoundsInParent
-         ())) {
+//        if (cloud.getBoundsInParent().contains(helicopter.getBoundsInParent
+//         ())) {
             cloud.seedCloud();
-        }
 
     }
 
@@ -239,13 +241,18 @@ class Pond extends GameObject {
 
 class Cloud extends GameObject {
     int seedPercentage = 0;
-    double opacity = 1;
+    Color cloudColor;
+
     Circle cloud;
+    int r, g, b;
     private GameText cloudSeedText;
 
     Cloud() {
+        this.r = 255;
+        this.g = 255;
+        this.b = 255;
+        cloudColor = Color.rgb(250,250,250);
         cloud = new Circle(100, 500, 50, Color.WHITE);
-        cloud.setOpacity(opacity);
         cloudSeedText = new GameText(seedPercentage + "%", Color.BLACK,
                 (int) cloud.getCenterX() - 5,
                 (int) cloud.getCenterY() + 5);
@@ -255,14 +262,16 @@ class Cloud extends GameObject {
     void seedCloud() {
         if (seedPercentage < 100) {
             seedPercentage++;
-
-            if (seedPercentage > 75  && opacity > .6) {
-                opacity-= 0.1;
-            }
+            r-= 2;
+            g-= 2;
+            b-= 2;
+            cloudColor = Color.rgb(r,g,b);
+            cloud.setFill(cloudColor);
+            cloud.setStroke(cloudColor);
         }
-        System.out.println(opacity);
+        //System.out.println(opacity);
         //System.out.println(seedPercentage);
-        cloud.setOpacity(opacity);
+        //cloud.setOpacity(opacity);
         cloudSeedText.setGameText(seedPercentage + "%");
     }
 
@@ -273,6 +282,9 @@ class Cloud extends GameObject {
     }
 
     public void update(double delta) {
+//        if (seedPercentage >= 0) {
+//            seedPercentage = seedPercentage / 2;
+//        }
     }
 }
 
