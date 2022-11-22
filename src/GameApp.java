@@ -5,6 +5,8 @@ import javafx.geometry.Point2D;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
@@ -23,10 +25,12 @@ public class GameApp extends Application {
 
     private final static int GAME_HEIGHT = 800;
     private final static int GAME_WIDTH = 400;
+    private boolean winLoss = false;
 
     @Override
     public void start(Stage stage) {
 
+        Alert alert;
         Game game = new Game();
         Scene scene = new Scene(game, GAME_WIDTH, GAME_HEIGHT);
         setupWindow(game, scene);
@@ -45,6 +49,11 @@ public class GameApp extends Application {
                 for (Node n : game.getChildren()) {
                     if (n instanceof Updatable)
                         ((Updatable) n).update(delta);
+                }
+
+
+                if (game.checkWinLoss()) {
+                    handleWinLoss(this, stage, game, scene);
                 }
             }
         };
@@ -65,6 +74,8 @@ public class GameApp extends Application {
             }
         });
 
+        System.out.println(game.pond.getWaterPercentage());
+
         scene.setFill(Color.BLACK);
         stage.setScene(scene);
         stage.setTitle("RainMaker");
@@ -80,14 +91,35 @@ public class GameApp extends Application {
         game.setScaleY(-1);
         scene.setFill(Color.BLACK);
     }
+
+    void handleWinLoss(AnimationTimer timer, Stage stage, Game game,
+                       Scene scene) {
+        timer.stop();
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "Play again?",
+                ButtonType.YES, ButtonType.NO);
+
+        alert.setOnHidden(evt -> {
+            if (alert.getResult() == ButtonType.YES) {
+                System.out.println("reset");
+                scene.setFill(Color.BLACK);
+                game.reset();
+                timer.start();
+            } else
+                stage.close();
+
+        });
+        alert.show();
+    }
+
 }
 
 class Game extends Pane {
     int helipadCenterX = 195;
     int helipadCenterY = 90;
     int fuel = 25000;
-    Pond pond = new Pond();
     Cloud cloud = new Cloud();
+    Pond pond = new Pond(cloud);
     Helipad helipad = new Helipad(helipadCenterX, helipadCenterY);
     Helicopter helicopter = new Helicopter(fuel, helipadCenterX,
             helipadCenterY);
@@ -130,7 +162,7 @@ class Game extends Pane {
     void reset() {
         helicopter.resetHelicopter();
         cloud.resetCloud();
-        //reset pond
+        pond.resetPond();
     }
 
     void ignition() {
@@ -141,10 +173,15 @@ class Game extends Pane {
 
     void updateCloud() {
 //        if (cloud.getBoundsInParent().contains(helicopter.getBoundsInParent
-//         ())) {
-            cloud.seedCloud();
+//                ())) {
+        cloud.seedCloud();
 
 
+    }
+
+    boolean checkWinLoss() {
+        //System.out.println(pond.getWaterPercentage());
+        return (int) pond.getWaterPercentage() == 100;
     }
 
 
@@ -224,24 +261,27 @@ class Pond extends GameObject {
     double scaleX;
     double scaleY;
     Circle pond;
+    Cloud relationship;
+    boolean isWinner = false;
 
-    Pond() {
+    Pond(Cloud c) {
+        this.relationship = c;
         pond = new Circle(50, 600, 15, Color.BLUE);
         this.waterPercentage = 0.0;
         this.scaleX = 1.0;
         this.scaleY = 1.0;
-        waterAmountText = new GameText((int) waterPercentage + "%", Color.WHITE,
-                (int) pond.getCenterX() - 5,
+        waterAmountText = new GameText(0 + "%", Color.WHITE,
+                (int) pond.getCenterX() - 7,
                 (int) pond.getCenterY() + 5);
         this.getChildren().addAll(pond, waterAmountText);
     }
 
     void increaseWaterAmount(double delta) {
-        if (Cloud.getSeedPercentage() > 30 && waterPercentage < 100) {
+        if (relationship.getSeedPercentage() > 30 && waterPercentage < 100) {
             scaleX += delta * .10;
             scaleY += delta * .10;
 
-            waterPercentage = waterPercentage + delta * 2;
+            waterPercentage = waterPercentage + delta * 10;
             waterAmountText.setGameText((int) waterPercentage + "%");
             pond.setScaleX(scaleX);
             pond.setScaleY(scaleY);
@@ -251,11 +291,29 @@ class Pond extends GameObject {
 
     public void update(double delta) {
         increaseWaterAmount(delta);
+        isWinner = gameWon();
+    }
+
+    void resetPond() {
+        scaleX = 1.0;
+        scaleY = 1.0;
+        pond.setScaleX(scaleX);
+        pond.setScaleY(scaleY);
+        waterPercentage = 0.0;
+        waterAmountText.setGameText(0 + "%");
+    }
+
+    public double getWaterPercentage() {
+        return waterPercentage;
+    }
+
+    boolean gameWon() {
+        return (int) waterPercentage == 100;
     }
 }
 
 class Cloud extends GameObject {
-    static private double seedPercentage = 0;
+    private double seedPercentage = 0;
     Color cloudColor;
 
     Circle cloud;
@@ -269,7 +327,7 @@ class Cloud extends GameObject {
         cloudColor = Color.rgb(250, 250, 250);
         cloud = new Circle(100, 500, 50, Color.WHITE);
         cloudSeedText = new GameText(seedPercentage + "%", Color.BLACK,
-                (int) cloud.getCenterX() - 5,
+                (int) cloud.getCenterX() - 7,
                 (int) cloud.getCenterY() + 5);
         this.getChildren().addAll(cloud, cloudSeedText);
     }
@@ -315,7 +373,7 @@ class Cloud extends GameObject {
         cloudSeedText.setGameText((int) seedPercentage + "%");
     }
 
-    static int getSeedPercentage() {
+    int getSeedPercentage() {
         return (int) seedPercentage;
     }
 
@@ -342,6 +400,7 @@ class Helicopter extends GameObject {
     GameText fuelText;
 
     // Using BigDecimal here because double didn't have precise arithmetic
+    // Use math.min instead
     BigDecimal speed = BigDecimal.valueOf(0);
     BigDecimal changeSpeed = BigDecimal.valueOf(0.1);
     double vx = 0.0;
@@ -411,7 +470,7 @@ class Helicopter extends GameObject {
                 velocity = velocity.add(vx, vy);
             } else {
                 //fix this
-                velocity = velocity.multiply(1 - 0.8 * delta);
+                velocity = velocity.multiply(1 - .8 * delta);
             }
             updateFuel();
         }
