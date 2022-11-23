@@ -58,6 +58,47 @@ public class GameApp extends Application {
             }
         };
 
+        handleKeyPresses(scene, game);
+
+        scene.setFill(Color.BLACK);
+        stage.setScene(scene);
+        stage.setTitle("RainMaker");
+        timer.start();
+        stage.show();
+    }
+
+    public static void main(String[] args) {
+        launch(args);
+    }
+
+    void setupWindow(Game game, Scene scene) {
+        game.setScaleY(-1);
+        scene.setFill(Color.BLACK);
+        game.setStyle("-fx-background-color: black ;");
+    }
+
+    void handleWinLoss(AnimationTimer timer, Stage stage, Game game,
+                       Scene scene) {
+        timer.stop();
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "Play again?",
+                ButtonType.YES, ButtonType.NO);
+
+        alert.setOnHidden(evt -> {
+            if (alert.getResult() == ButtonType.YES) {
+                System.out.println("reset");
+                scene.setFill(Color.BLACK);
+                game.reset();
+                timer.start();
+
+            } else
+                stage.close();
+
+        });
+        alert.show();
+    }
+
+    void handleKeyPresses(Scene scene, Game game) {
         //if the up arrow is pressed move up
         scene.setOnKeyPressed(e -> {
             switch (e.getCode()) {
@@ -74,44 +115,7 @@ public class GameApp extends Application {
             }
         });
 
-        System.out.println(game.pond.getWaterPercentage());
-
-        scene.setFill(Color.BLACK);
-        stage.setScene(scene);
-        stage.setTitle("RainMaker");
-        timer.start();
-        stage.show();
     }
-
-    public static void main(String[] args) {
-        launch(args);
-    }
-
-    void setupWindow(Game game, Scene scene) {
-        game.setScaleY(-1);
-        scene.setFill(Color.BLACK);
-    }
-
-    void handleWinLoss(AnimationTimer timer, Stage stage, Game game,
-                       Scene scene) {
-        timer.stop();
-
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "Play again?",
-                ButtonType.YES, ButtonType.NO);
-
-        alert.setOnHidden(evt -> {
-            if (alert.getResult() == ButtonType.YES) {
-                System.out.println("reset");
-                scene.setFill(Color.BLACK);
-                game.reset();
-                timer.start();
-            } else
-                stage.close();
-
-        });
-        alert.show();
-    }
-
 }
 
 class Game extends Pane {
