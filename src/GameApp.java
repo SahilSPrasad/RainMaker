@@ -52,7 +52,7 @@ public class GameApp extends Application {
                 }
 
 
-                if (game.checkWinLoss()) {
+                if (game.checkPondWin() || game.checkFuelLost()) {
                     handleWinLoss(this, stage, game, scene);
                 }
             }
@@ -121,7 +121,7 @@ public class GameApp extends Application {
 class Game extends Pane {
     int helipadCenterX = 195;
     int helipadCenterY = 90;
-    int fuel = 25000;
+    final int fuel = 25000;
     Cloud cloud = new Cloud();
     Pond pond = new Pond(cloud);
     Helipad helipad = new Helipad(helipadCenterX, helipadCenterY);
@@ -176,16 +176,22 @@ class Game extends Pane {
     }
 
     void updateCloud() {
-//        if (cloud.getBoundsInParent().contains(helicopter.getBoundsInParent
-//                ())) {
-        cloud.seedCloud();
+        if (cloud.getBoundsInParent().intersects(helicopter.getBoundsInParent
+                ())) {
+            cloud.seedCloud();
+        }
 
 
     }
 
-    boolean checkWinLoss() {
+    boolean checkPondWin() {
         //System.out.println(pond.getWaterPercentage());
         return (int) pond.getWaterPercentage() == 100;
+    }
+
+    boolean checkFuelLost() {
+        //System.out.println(helicopter.getFuel());
+        return helicopter.getFuel() == 0;
     }
 
 
@@ -254,6 +260,10 @@ abstract class GameObject extends Group implements Updatable {
         myTranslation.setY(ty);
     }
 
+    public int getRandomNumber(int min, int max) {
+        return (int) ((Math.random() * (max - min)) + min);
+    }
+
     public double getMyRotation() {
         return myRotation.getAngle();
     }
@@ -261,7 +271,7 @@ abstract class GameObject extends Group implements Updatable {
 
 class Pond extends GameObject {
     private double waterPercentage;
-    private final GameText waterAmountText;
+    private GameText waterAmountText;
     double scaleX;
     double scaleY;
     Circle pond;
@@ -270,7 +280,8 @@ class Pond extends GameObject {
 
     Pond(Cloud c) {
         this.relationship = c;
-        pond = new Circle(50, 600, 15, Color.BLUE);
+        pond = new Circle(getRandomNumber(100, 300), getRandomNumber(500, 700),
+                getRandomNumber(15, 30), Color.BLUE);
         this.waterPercentage = 0.0;
         this.scaleX = 1.0;
         this.scaleY = 1.0;
@@ -304,7 +315,13 @@ class Pond extends GameObject {
         pond.setScaleX(scaleX);
         pond.setScaleY(scaleY);
         waterPercentage = 0.0;
-        waterAmountText.setGameText(0 + "%");
+        this.getChildren().clear();
+        pond = new Circle(getRandomNumber(100, 300), getRandomNumber(500, 700),
+                getRandomNumber(15, 30), Color.BLUE);
+        waterAmountText = new GameText(0 + "%", Color.WHITE,
+                (int) pond.getCenterX() - 7,
+                (int) pond.getCenterY() + 5);
+        this.getChildren().addAll(pond, waterAmountText);
     }
 
     public double getWaterPercentage() {
@@ -476,7 +493,7 @@ class Helicopter extends GameObject {
                 //fix this
                 velocity = velocity.multiply(1 - .8 * delta);
             }
-            updateFuel();
+            updateFuel(delta);
         }
 
         this.translate(velocity.getX(), velocity.getY());
@@ -518,8 +535,8 @@ class Helicopter extends GameObject {
         // be able to turn off the ignition
     }
 
-    void updateFuel() {
-        if (ignition) {
+    void updateFuel(double delta) {
+        if (ignition && fuel >= 0) {
 
             if (speed.doubleValue() <= 0) {
                 fuel -= .01;
@@ -529,6 +546,10 @@ class Helicopter extends GameObject {
             //System.out.println(fuel);
             fuelText.setGameText("F:" + fuel);
         }
+    }
+
+    int getFuel() {
+        return fuel;
     }
 
     public void update(double delta) {
