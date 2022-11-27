@@ -90,7 +90,6 @@ public class GameApp extends Application {
                 scene.setFill(Color.BLACK);
                 game.reset();
                 timer.start();
-
             } else
                 stage.close();
 
@@ -190,8 +189,8 @@ class Game extends Pane {
     }
 
     boolean checkFuelLost() {
-        //System.out.println(helicopter.getFuel());
-        return helicopter.getFuel() == 0;
+        System.out.println(helicopter.getFuel());
+        return helicopter.getFuel() < 0;
     }
 
 
@@ -545,7 +544,7 @@ class Helicopter extends GameObject {
     }
 
     void updateFuel(double delta) {
-        if (ignition && fuel >= 0) {
+        if (ignition) {
 
             if (speed.doubleValue() <= 0) {
                 fuel -= .01;
