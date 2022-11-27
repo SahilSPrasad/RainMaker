@@ -339,14 +339,15 @@ class Cloud extends GameObject {
 
     Circle cloud;
     int r, g, b;
-    private final GameText cloudSeedText;
+    private GameText cloudSeedText;
 
     Cloud() {
         this.r = 255;
         this.g = 255;
         this.b = 255;
         cloudColor = Color.rgb(250, 250, 250);
-        cloud = new Circle(100, 500, 50, Color.WHITE);
+        cloud = new Circle(getRandomNumber(100, 300), getRandomNumber(500, 700),
+                getRandomNumber(30, 45), Color.WHITE);
         cloudSeedText = new GameText(seedPercentage + "%", Color.BLACK,
                 (int) cloud.getCenterX() - 7,
                 (int) cloud.getCenterY() + 5);
@@ -373,6 +374,14 @@ class Cloud extends GameObject {
         b = 255;
         cloud.setFill(cloudColor);
         cloudSeedText.setGameText(seedPercentage + "%");
+        this.getChildren().clear();
+        cloud = new Circle(getRandomNumber(100, 300), getRandomNumber(400, 700),
+                getRandomNumber(30, 45), cloudColor);
+        cloudSeedText = new GameText(0 + "%", Color.BLACK,
+                (int) cloud.getCenterX() - 7,
+                (int) cloud.getCenterY() + 5);
+        this.getChildren().addAll(cloud,cloudSeedText);
+
     }
 
     public void update(double delta) {
