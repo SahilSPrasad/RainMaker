@@ -32,7 +32,7 @@ public class GameApp extends Application {
 
         Game game = new Game();
         Scene scene = new Scene(game, GAME_WIDTH, GAME_HEIGHT);
-        setupWindow(game, scene);
+        setupWindow(game);
 
         AnimationTimer timer = new AnimationTimer() {
             double old = -1;
@@ -70,7 +70,7 @@ public class GameApp extends Application {
         launch(args);
     }
 
-    void setupWindow(Game game, Scene scene) {
+    void setupWindow(Game game) {
         BackgroundImage myBI = new BackgroundImage(new Image("output.jpg"),
                 BackgroundRepeat.NO_REPEAT, BackgroundRepeat.NO_REPEAT,
                 BackgroundPosition.DEFAULT,
@@ -78,8 +78,6 @@ public class GameApp extends Application {
         game.setBackground(new Background(myBI));
         game.setScaleY(-1);
 
-//        scene.setFill(Color.BLACK);
-//        game.setStyle("-fx-background-color: black ;");
     }
 
     void handleWinLoss(AnimationTimer timer, Stage stage, Game game,
@@ -288,7 +286,7 @@ class Pond extends GameObject {
         this.relationship = c;
         pond = new Circle(getRandomNumber(100, 300), getRandomNumber(500, 700),
                 getRandomNumber(15, 30), Color.BLUE);
-        this.waterPercentage = getRandomNumber(0,25);
+        this.waterPercentage = getRandomNumber(0, 25);
         this.scaleX = 1.0;
         this.scaleY = 1.0;
         waterAmountText = new GameText((int) waterPercentage + "%", Color.WHITE,
@@ -320,7 +318,7 @@ class Pond extends GameObject {
         scaleY = 1.0;
         pond.setScaleX(scaleX);
         pond.setScaleY(scaleY);
-        waterPercentage = getRandomNumber(0,25);
+        waterPercentage = getRandomNumber(0, 25);
         this.getChildren().clear();
         pond = new Circle(getRandomNumber(100, 300), getRandomNumber(500, 700),
                 getRandomNumber(15, 30), Color.BLUE);
@@ -509,7 +507,7 @@ class Helicopter extends GameObject {
                 //fix this
                 velocity = velocity.multiply(1 - .2 * delta);
             }
-            updateFuel(delta);
+            updateFuel();
         }
 
         this.translate(velocity.getX(), velocity.getY());
@@ -518,7 +516,7 @@ class Helicopter extends GameObject {
     // magnitude of velocity vector is its speed
     // vector = <x, y>
     // press w <x, y + 1>
-    // so we are given it's speed to begin with by pressing w/up
+    // so we are given its speed to begin with by pressing w/up
     // .1 when it is first pressed
     // angle(heading) is changed by pressing a and d
     // the initial angle of the helicopter is 90
@@ -551,7 +549,7 @@ class Helicopter extends GameObject {
         // be able to turn off the ignition
     }
 
-    void updateFuel(double delta) {
+    void updateFuel() {
         if (ignition) {
 
             if (speed.doubleValue() <= 0) {
