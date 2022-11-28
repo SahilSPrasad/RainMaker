@@ -7,7 +7,8 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
-import javafx.scene.layout.Pane;
+import javafx.scene.image.Image;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
@@ -25,12 +26,10 @@ public class GameApp extends Application {
 
     private final static int GAME_HEIGHT = 800;
     private final static int GAME_WIDTH = 400;
-    private boolean winLoss = false;
 
     @Override
     public void start(Stage stage) {
 
-        Alert alert;
         Game game = new Game();
         Scene scene = new Scene(game, GAME_WIDTH, GAME_HEIGHT);
         setupWindow(game, scene);
@@ -72,9 +71,15 @@ public class GameApp extends Application {
     }
 
     void setupWindow(Game game, Scene scene) {
+        BackgroundImage myBI = new BackgroundImage(new Image("output.jpg"),
+                BackgroundRepeat.NO_REPEAT, BackgroundRepeat.NO_REPEAT,
+                BackgroundPosition.DEFAULT,
+                BackgroundSize.DEFAULT);
+        game.setBackground(new Background(myBI));
         game.setScaleY(-1);
-        scene.setFill(Color.BLACK);
-        game.setStyle("-fx-background-color: black ;");
+
+//        scene.setFill(Color.BLACK);
+//        game.setStyle("-fx-background-color: black ;");
     }
 
     void handleWinLoss(AnimationTimer timer, Stage stage, Game game,
@@ -138,6 +143,8 @@ class Game extends Pane {
     }
 
     void createGameObjects() {
+
+
         this.getChildren().addAll(pond, cloud, helipad, helicopter,
                 helicopterBounds, helipadBounds, cloudBounds);
 
@@ -189,7 +196,7 @@ class Game extends Pane {
     }
 
     boolean checkFuelLost() {
-        System.out.println(helicopter.getFuel());
+        //System.out.println(helicopter.getFuel());
         return helicopter.getFuel() < 0;
     }
 
@@ -281,10 +288,10 @@ class Pond extends GameObject {
         this.relationship = c;
         pond = new Circle(getRandomNumber(100, 300), getRandomNumber(500, 700),
                 getRandomNumber(15, 30), Color.BLUE);
-        this.waterPercentage = 0.0;
+        this.waterPercentage = getRandomNumber(0,25);
         this.scaleX = 1.0;
         this.scaleY = 1.0;
-        waterAmountText = new GameText(0 + "%", Color.WHITE,
+        waterAmountText = new GameText((int) waterPercentage + "%", Color.WHITE,
                 (int) pond.getCenterX() - 7,
                 (int) pond.getCenterY() + 5);
         this.getChildren().addAll(pond, waterAmountText);
@@ -313,11 +320,11 @@ class Pond extends GameObject {
         scaleY = 1.0;
         pond.setScaleX(scaleX);
         pond.setScaleY(scaleY);
-        waterPercentage = 0.0;
+        waterPercentage = getRandomNumber(0,25);
         this.getChildren().clear();
         pond = new Circle(getRandomNumber(100, 300), getRandomNumber(500, 700),
                 getRandomNumber(15, 30), Color.BLUE);
-        waterAmountText = new GameText(0 + "%", Color.WHITE,
+        waterAmountText = new GameText((int) waterPercentage + "%", Color.WHITE,
                 (int) pond.getCenterX() - 7,
                 (int) pond.getCenterY() + 5);
         this.getChildren().addAll(pond, waterAmountText);
@@ -372,14 +379,13 @@ class Cloud extends GameObject {
         g = 255;
         b = 255;
         cloud.setFill(cloudColor);
-        cloudSeedText.setGameText(seedPercentage + "%");
         this.getChildren().clear();
         cloud = new Circle(getRandomNumber(100, 300), getRandomNumber(400, 700),
                 getRandomNumber(30, 45), cloudColor);
-        cloudSeedText = new GameText(0 + "%", Color.BLACK,
+        cloudSeedText = new GameText(seedPercentage + "%", Color.BLACK,
                 (int) cloud.getCenterX() - 7,
                 (int) cloud.getCenterY() + 5);
-        this.getChildren().addAll(cloud,cloudSeedText);
+        this.getChildren().addAll(cloud, cloudSeedText);
 
     }
 
@@ -412,9 +418,11 @@ class Helipad extends GameObject {
 
     Helipad(int padCenterX, int padCenterY) {
         Rectangle border = new Rectangle(145, 40, 100, 100);
+        border.setFill(Color.TRANSPARENT);
         border.setStroke(Color.WHITE);
 
         Circle pad = new Circle(padCenterX, padCenterY, 40);
+        pad.setFill(Color.TRANSPARENT);
         pad.setStroke(Color.WHITE);
 
         this.getChildren().addAll(border, pad);
@@ -499,7 +507,7 @@ class Helicopter extends GameObject {
                 velocity = velocity.add(vx, vy);
             } else {
                 //fix this
-                velocity = velocity.multiply(1 - .8 * delta);
+                velocity = velocity.multiply(1 - .2 * delta);
             }
             updateFuel(delta);
         }
