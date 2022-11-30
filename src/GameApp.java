@@ -8,6 +8,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
@@ -15,6 +16,7 @@ import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
+import javafx.scene.transform.Affine;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
@@ -337,6 +339,7 @@ class Pond extends GameObject {
     }
 }
 
+
 class Cloud extends GameObject {
     private double seedPercentage = 0;
     Color cloudColor;
@@ -431,7 +434,7 @@ class Helipad extends GameObject {
 }
 
 class Helicopter extends GameObject {
-    Point2D velocity;
+    Point2D velocity, position;
     GameText fuelText;
 
     // Using BigDecimal here because double didn't have precise arithmetic
@@ -448,23 +451,29 @@ class Helicopter extends GameObject {
 
     boolean ignition = false;
 
+    HeloBlade blade;
+
 
     Helicopter(int fuel, int helipadCenterX, int helipadCenterY) {
         this.fuel = fuel;
         centerX = helipadCenterX;
         centerY = helipadCenterY;
-        Circle base = new Circle(centerX, centerY, 10,
-                Color.YELLOW);
+        position = new Point2D(0, 0);
+//        Circle base = new Circle(centerX, centerY, 10,
+//                Color.YELLOW);
 
-        Line roter = new Line(195, 90, 195, 120);
-        roter.setStroke(Color.YELLOW);
-        roter.setStrokeWidth(2);
+        HeloBody body = new HeloBody(centerX, centerY);
+        blade = new HeloBlade(centerX, centerY);
 
-        fuelText = new GameText("F:" + fuel, Color.YELLOW, 175, 75);
+        Line rotor = new Line(195, 90, 195, 120);
+        rotor.setStroke(Color.YELLOW);
+        rotor.setStrokeWidth(2);
+
+        fuelText = new GameText("F:" + fuel, Color.YELLOW, 175, 55);
 
         velocity = new Point2D(0, 0);
 
-        this.getChildren().addAll(base, roter, fuelText);
+        this.getChildren().addAll(body, blade, fuelText);
     }
 
     void increaseHelicopterSpeed() {
@@ -486,7 +495,6 @@ class Helicopter extends GameObject {
             heading -= 15;
             this.rotate(this.getMyRotation() - 15, centerX, centerY);
         }
-
     }
 
     void moveHelicopterLeft() {
@@ -497,19 +505,20 @@ class Helicopter extends GameObject {
     }
 
     void updateHelicopter(double delta) {
-        vx = speed.doubleValue() * Math.cos(Math.toRadians(heading));
-        vy = speed.doubleValue() * Math.sin(Math.toRadians(heading));
 
         if (ignition) {
+
             if (speed.doubleValue() != 0) {
+                vx = speed.doubleValue() * Math.cos(Math.toRadians(heading));
+                vy = speed.doubleValue() * Math.sin(Math.toRadians(heading));
                 velocity = velocity.add(vx, vy);
             } else {
-                //fix this
-                velocity = velocity.multiply(1 - .2 * delta);
+                velocity = velocity.multiply(1 - .8 * delta);
             }
             updateFuel();
         }
-
+        //System.out.println(speed.doubleValue());
+        ///position = position.add(velocity.multiply(delta));
         this.translate(velocity.getX(), velocity.getY());
     }
 
@@ -530,19 +539,24 @@ class Helicopter extends GameObject {
 
 
     void resetHelicopter() {
+
+        vx = 0;
+        vy = 0;
         fuel = 25000;
         fuelText.setGameText("F:" + fuel);
         velocity = new Point2D(0, 0);
+        position = new Point2D(0, 0);
         heading = 90;
         speed = BigDecimal.valueOf(0);
         ignition = false;
-
+        blade.resetBlade();
         this.rotate(getMyRotation() - getMyRotation(), centerX, centerY);
     }
 
     void toggleIgnition() {
         if (speed.doubleValue() == 0.0) {
             ignition = !ignition;
+            //System.out.println("called");
         }
 
         //if the helicopter is on the helipad and not moving(velocity = 0)
@@ -569,9 +583,59 @@ class Helicopter extends GameObject {
     public void update(double delta) {
         this.updateBounds();
         updateHelicopter(delta);
+        if (ignition) blade.update(delta);
+    }
+}
+
+
+class HeloBody extends GameObject {
+    Image body;
+    ImageView imageView;
+
+    HeloBody(int x, int y) {
+        body = new Image("helibody2.png");
+        imageView = new ImageView();
+        imageView.setPreserveRatio(true);
+        imageView.setImage(body);
+        imageView.setScaleY(-1);
+        imageView.setX(x - 30);
+        imageView.setY(y - 50);
+        imageView.fitHeightProperty();
+        imageView.setFitHeight(100);
+        imageView.setFitWidth(170);
+        this.getChildren().add(imageView);
+    }
+
+    @Override
+    public void update(double delta) {
 
     }
 }
+
+class HeloBlade extends GameObject {
+    Rectangle blade;
+    double bladeCenterX;
+    double bladeCenterY;
+
+    HeloBlade(int x, int y) {
+        blade = new Rectangle(70, 5, Color.WHITE);
+        bladeCenterX = x;
+        bladeCenterY = y;
+        blade.setX(bladeCenterX - 33);
+        blade.setY(bladeCenterY);
+        this.getChildren().add(blade);
+    }
+
+    void resetBlade() {
+        blade.setRotate(0);
+    }
+
+    @Override
+    public void update(double delta) {
+        blade.setRotate(blade.getRotate() + 5);
+    }
+}
+
 
 interface Updatable {
     void update(double delta);
