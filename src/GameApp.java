@@ -182,6 +182,7 @@ class Game extends Pane {
     }
 
     void updateCloud() {
+        //if the helicopter is in the ready state
         if (cloud.getBoundsInParent().intersects(helicopter.getBoundsInParent
                 ())) {
             cloud.seedCloud();
@@ -362,6 +363,7 @@ class Cloud extends GameObject {
     }
 
     void seedCloud() {
+
         if (seedPercentage < 100) {
             seedPercentage++;
             r -= 2;
@@ -450,8 +452,18 @@ class Helicopter extends GameObject {
     int fuel;
 
     boolean ignition = false;
+    boolean canSeed = false;
 
+    HeloBody body;
     HeloBlade blade;
+
+
+    HelicopterState off;
+    HelicopterState starting;
+    HelicopterState stopping;
+    HelicopterState ready;
+
+    HelicopterState helicopterState;
 
 
     Helicopter(int fuel, int helipadCenterX, int helipadCenterY) {
@@ -459,10 +471,8 @@ class Helicopter extends GameObject {
         centerX = helipadCenterX;
         centerY = helipadCenterY;
         position = new Point2D(0, 0);
-//        Circle base = new Circle(centerX, centerY, 10,
-//                Color.YELLOW);
 
-        HeloBody body = new HeloBody(centerX, centerY);
+        body = new HeloBody(centerX, centerY);
         blade = new HeloBlade(centerX, centerY);
 
         Line rotor = new Line(195, 90, 195, 120);
@@ -473,16 +483,37 @@ class Helicopter extends GameObject {
 
         velocity = new Point2D(0, 0);
 
+        off = new Off(this);
+        starting = new Starting(this);
+        stopping = new Stopping(this);
+        ready = new Ready(this);
+
+        helicopterState = off;
+
+
+
         this.getChildren().addAll(body, blade, fuelText);
     }
 
+    void setHelicopterState(HelicopterState newHelicopterState) {
+        helicopterState = newHelicopterState;
+    }
+
+    HelicopterState getOffState() {return off;}
+    HelicopterState getStartingState() {return starting;}
+    HelicopterState getStoppingState() {return stopping;}
+    HelicopterState getReady() {return ready;}
+
+
     void increaseHelicopterSpeed() {
+        //if the helicopter is in ready state
         if (speed.doubleValue() < 10.0 && ignition) {
             speed = speed.add(changeSpeed);
         }
     }
 
     void decreaseHelicopterSpeed() {
+        //if the helicopter is in ready state
         if (speed.doubleValue() > -2 && ignition) {
             speed = speed.subtract(changeSpeed);
         }
@@ -491,6 +522,7 @@ class Helicopter extends GameObject {
     // we need to find the center of the helicopter object
     // and on that center point we need to pivot the helicopter
     void moveHelicopterRight() {
+        //if the helicopter is in ready state
         if (ignition && speed.doubleValue() != 0) {
             heading -= 15;
             this.rotate(this.getMyRotation() - 15, centerX, centerY);
@@ -498,6 +530,7 @@ class Helicopter extends GameObject {
     }
 
     void moveHelicopterLeft() {
+        //if the helicopter is in ready state
         if (ignition && speed.doubleValue() != 0) {
             heading += 15;
             this.rotate(this.getMyRotation() + 15, centerX, centerY);
@@ -539,7 +572,6 @@ class Helicopter extends GameObject {
 
 
     void resetHelicopter() {
-
         vx = 0;
         vy = 0;
         fuel = 25000;
@@ -558,12 +590,10 @@ class Helicopter extends GameObject {
             ignition = !ignition;
             //System.out.println("called");
         }
-
-        //if the helicopter is on the helipad and not moving(velocity = 0)
-        // be able to turn off the ignition
     }
 
     void updateFuel() {
+        //if helicopter is in starting state or ready state
         if (ignition) {
 
             if (speed.doubleValue() <= 0) {
@@ -637,6 +667,113 @@ class HeloBlade extends GameObject {
 }
 
 
+interface HelicopterState {
+
+    void toggleIgnition();
+    void seedClouds();
+    void moveCopter();
+
+
+
+}
+
+class Off implements HelicopterState {
+    Helicopter helicopter;
+//  Helicopter can have engine started
+//  Helicopter does not consume fuel
+
+
+    Off(Helicopter newHelicopter) {
+        helicopter = newHelicopter;
+    }
+
+    @Override
+    public void toggleIgnition() {
+        helicopter.toggleIgnition();
+        helicopter.setHelicopterState(helicopter.getStartingState());
+    }
+
+    @Override
+    public void seedClouds() {
+
+    }
+
+    @Override
+    public void moveCopter() {
+
+    }
+}
+
+class Starting implements HelicopterState {
+    Helicopter helicopter;
+
+    Starting(Helicopter newHelicopter) {
+        helicopter = newHelicopter;
+    }
+
+
+    @Override
+    public void toggleIgnition() {
+
+    }
+
+    @Override
+    public void seedClouds() {
+
+    }
+
+    @Override
+    public void moveCopter() {
+
+    }
+}
+
+class Stopping implements HelicopterState {
+    Helicopter helicopter;
+
+    Stopping(Helicopter newHelicopter) {
+        helicopter = newHelicopter;
+    }
+
+    @Override
+    public void toggleIgnition() {
+
+    }
+
+    @Override
+    public void seedClouds() {
+
+    }
+
+    @Override
+    public void moveCopter() {
+
+    }
+}
+
+class Ready implements HelicopterState {
+    Helicopter helicopter;
+
+    Ready(Helicopter newHelicopter) {
+        helicopter = newHelicopter;
+    }
+
+    @Override
+    public void toggleIgnition() {
+
+    }
+
+    @Override
+    public void seedClouds() {
+
+    }
+
+    @Override
+    public void moveCopter() {
+
+    }
+}
+
 interface Updatable {
     void update(double delta);
 }
@@ -662,13 +799,5 @@ class GameText extends GameObject {
     public void update(double delta) {
     }
 }
-
-// 10-25-2022
-// TODO:create helicopter object
-//  be able to move it up and down
-
-// 11-06-2022
-// TODO: add fuel to helicopter object
-//  create stop logic
 
 
