@@ -13,10 +13,8 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
-import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
-import javafx.scene.transform.Affine;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
@@ -436,33 +434,16 @@ class Helipad extends GameObject {
 }
 
 class Helicopter extends GameObject {
-    Point2D velocity, position;
     GameText fuelText;
 
-    // Using BigDecimal here because double didn't have precise arithmetic
-    // Use math.min instead
-    BigDecimal speed = BigDecimal.valueOf(0);
-    BigDecimal changeSpeed = BigDecimal.valueOf(0.1);
-    double vx = 0.0;
-    double vy = 0.0;
-
-    int heading = 90;
-    int centerX;
-    int centerY;
+    private final int centerX;
+    private final int centerY;
     int fuel;
-
-    boolean ignition = false;
-    boolean canSeed = false;
 
     HeloBody body;
     HeloBlade blade;
 
-
     HelicopterState off;
-    HelicopterState starting;
-    HelicopterState stopping;
-    HelicopterState ready;
-
     HelicopterState helicopterState;
 
 
@@ -470,27 +451,15 @@ class Helicopter extends GameObject {
         this.fuel = fuel;
         centerX = helipadCenterX;
         centerY = helipadCenterY;
-        position = new Point2D(0, 0);
 
         body = new HeloBody(centerX, centerY);
         blade = new HeloBlade(centerX, centerY);
 
-        Line rotor = new Line(195, 90, 195, 120);
-        rotor.setStroke(Color.YELLOW);
-        rotor.setStrokeWidth(2);
-
         fuelText = new GameText("F:" + fuel, Color.YELLOW, 175, 55);
 
-        velocity = new Point2D(0, 0);
 
-        off = new Off(this);
-        starting = new Starting(this);
-        stopping = new Stopping(this);
-        ready = new Ready(this);
-
+        off = new Off(this, blade, fuelText);
         helicopterState = off;
-
-
 
         this.getChildren().addAll(body, blade, fuelText);
     }
@@ -499,60 +468,21 @@ class Helicopter extends GameObject {
         helicopterState = newHelicopterState;
     }
 
-    HelicopterState getOffState() {return off;}
-    HelicopterState getStartingState() {return starting;}
-    HelicopterState getStoppingState() {return stopping;}
-    HelicopterState getReady() {return ready;}
-
-
     void increaseHelicopterSpeed() {
-        //if the helicopter is in ready state
-        if (speed.doubleValue() < 10.0 && ignition) {
-            speed = speed.add(changeSpeed);
-        }
+        helicopterState.increaseHelicopterSpeed();
     }
 
     void decreaseHelicopterSpeed() {
-        //if the helicopter is in ready state
-        if (speed.doubleValue() > -2 && ignition) {
-            speed = speed.subtract(changeSpeed);
-        }
+        helicopterState.decreaseHelicopterSpeed();
+
     }
 
-    // we need to find the center of the helicopter object
-    // and on that center point we need to pivot the helicopter
     void moveHelicopterRight() {
-        //if the helicopter is in ready state
-        if (ignition && speed.doubleValue() != 0) {
-            heading -= 15;
-            this.rotate(this.getMyRotation() - 15, centerX, centerY);
-        }
+        helicopterState.moveRight(centerX, centerY);
     }
 
     void moveHelicopterLeft() {
-        //if the helicopter is in ready state
-        if (ignition && speed.doubleValue() != 0) {
-            heading += 15;
-            this.rotate(this.getMyRotation() + 15, centerX, centerY);
-        }
-    }
-
-    void updateHelicopter(double delta) {
-
-        if (ignition) {
-
-            if (speed.doubleValue() != 0) {
-                vx = speed.doubleValue() * Math.cos(Math.toRadians(heading));
-                vy = speed.doubleValue() * Math.sin(Math.toRadians(heading));
-                velocity = velocity.add(vx, vy);
-            } else {
-                velocity = velocity.multiply(1 - .8 * delta);
-            }
-            updateFuel();
-        }
-        //System.out.println(speed.doubleValue());
-        ///position = position.add(velocity.multiply(delta));
-        this.translate(velocity.getX(), velocity.getY());
+        helicopterState.moveLeft(centerX, centerY);
     }
 
     // magnitude of velocity vector is its speed
@@ -572,38 +502,14 @@ class Helicopter extends GameObject {
 
 
     void resetHelicopter() {
-        vx = 0;
-        vy = 0;
-        fuel = 25000;
-        fuelText.setGameText("F:" + fuel);
-        velocity = new Point2D(0, 0);
-        position = new Point2D(0, 0);
-        heading = 90;
-        speed = BigDecimal.valueOf(0);
-        ignition = false;
-        blade.resetBlade();
+        setHelicopterState(new Off(this, blade, fuelText));
         this.rotate(getMyRotation() - getMyRotation(), centerX, centerY);
+        this.getChildren().clear();
+        this.getChildren().addAll(body, blade, fuelText);
     }
 
     void toggleIgnition() {
-        if (speed.doubleValue() == 0.0) {
-            ignition = !ignition;
-            //System.out.println("called");
-        }
-    }
-
-    void updateFuel() {
-        //if helicopter is in starting state or ready state
-        if (ignition) {
-
-            if (speed.doubleValue() <= 0) {
-                fuel -= .01;
-            } else
-                fuel -= 5 * speed.doubleValue();
-
-            //System.out.println(fuel);
-            fuelText.setGameText("F:" + fuel);
-        }
+        helicopterState.toggleIgnition();
     }
 
     int getFuel() {
@@ -611,9 +517,10 @@ class Helicopter extends GameObject {
     }
 
     public void update(double delta) {
+        helicopterState.updateFuel();
+        helicopterState.updateBlade(delta);
+        helicopterState.moveCopter();
         this.updateBounds();
-        updateHelicopter(delta);
-        if (ignition) blade.update(delta);
     }
 }
 
@@ -638,7 +545,6 @@ class HeloBody extends GameObject {
 
     @Override
     public void update(double delta) {
-
     }
 }
 
@@ -656,13 +562,8 @@ class HeloBlade extends GameObject {
         this.getChildren().add(blade);
     }
 
-    void resetBlade() {
-        blade.setRotate(0);
-    }
-
     @Override
     public void update(double delta) {
-        blade.setRotate(blade.getRotate() + 5);
     }
 }
 
@@ -670,47 +571,96 @@ class HeloBlade extends GameObject {
 interface HelicopterState {
 
     void toggleIgnition();
+
+    void updateFuel();
+
+    void updateBlade(double delta);
+
     void seedClouds();
+
     void moveCopter();
 
+    void increaseHelicopterSpeed();
 
+    void decreaseHelicopterSpeed();
 
+    void moveLeft(int centerX, int centerY);
+
+    void moveRight(int centerX, int centerY);
 }
 
 class Off implements HelicopterState {
-    Helicopter helicopter;
-//  Helicopter can have engine started
+    //  Helicopter can have engine started
 //  Helicopter does not consume fuel
+    private final Helicopter helicopter;
+    private final HeloBlade blade;
+    private final GameText fuelText;
+    private final int fuel;
+    private final double bladeSpeed;
 
 
-    Off(Helicopter newHelicopter) {
-        helicopter = newHelicopter;
+    Off(Helicopter helicopter, HeloBlade blade,
+        GameText fuelText) {
+        this.helicopter = helicopter;
+        this.blade = blade;
+        this.fuel = 25000;
+        this.fuelText = fuelText;
+        this.bladeSpeed = 0;
+        helicopter.translate(0, 0);
+        System.out.println("OFF STATE");
+        fuelText.setGameText("F:" + fuel);
     }
 
     @Override
     public void toggleIgnition() {
-        helicopter.toggleIgnition();
-        helicopter.setHelicopterState(helicopter.getStartingState());
+        helicopter.setHelicopterState(new Starting(helicopter, blade,
+                bladeSpeed,
+                fuel, fuelText));
     }
 
     @Override
-    public void seedClouds() {
-
-    }
+    public void updateFuel() {}
 
     @Override
-    public void moveCopter() {
+    public void updateBlade(double delta) {}
 
-    }
+    @Override
+    public void seedClouds() {}
+
+    @Override
+    public void moveCopter() {}
+
+    @Override
+    public void increaseHelicopterSpeed() {}
+
+    @Override
+    public void decreaseHelicopterSpeed() {}
+
+    @Override
+    public void moveLeft(int centerX, int centerY) {}
+
+    @Override
+    public void moveRight(int centerX, int centerY) {}
 }
 
 class Starting implements HelicopterState {
-    Helicopter helicopter;
+    private final Helicopter helicopter;
+    private final HeloBlade blade;
+    private final GameText fuelText;
+    private int fuel;
+    private double bladeSpeed;
 
-    Starting(Helicopter newHelicopter) {
-        helicopter = newHelicopter;
+    Starting(Helicopter helicopter, HeloBlade blade, double bladeSpeed,
+             int fuel,
+             GameText fuelText
+    ) {
+        this.helicopter = helicopter;
+        this.blade = blade;
+        this.fuel = fuel;
+        this.fuelText = fuelText;
+        this.bladeSpeed = bladeSpeed;
+        System.out.println("STARTING");
     }
-
 
     @Override
     public void toggleIgnition() {
@@ -718,25 +668,57 @@ class Starting implements HelicopterState {
     }
 
     @Override
-    public void seedClouds() {
-
+    public void updateFuel() {
+        fuel -= .01;
+        fuelText.setGameText("F:" + fuel);
     }
 
     @Override
-    public void moveCopter() {
+    public void updateBlade(double delta) {
+        bladeSpeed += delta;
+        blade.setRotate(blade.getRotate() + bladeSpeed);
 
+        if (blade.getRotate() > 5000) {
+            helicopter.setHelicopterState(new Ready(helicopter, blade,
+                    bladeSpeed, fuel, fuelText));
+        }
     }
+
+    @Override
+    public void seedClouds() {}
+
+    @Override
+    public void moveCopter() {}
+
+    @Override
+    public void increaseHelicopterSpeed() {}
+
+    @Override
+    public void decreaseHelicopterSpeed() {}
+
+    @Override
+    public void moveLeft(int centerX, int centerY) {}
+
+    @Override
+    public void moveRight(int centerX, int centerY) {}
 }
 
 class Stopping implements HelicopterState {
-    Helicopter helicopter;
 
-    Stopping(Helicopter newHelicopter) {
-        helicopter = newHelicopter;
+    Stopping() {
+
     }
 
     @Override
     public void toggleIgnition() {
+
+    }
+
+    @Override
+    public void updateFuel() {}
+
+    @Override
+    public void updateBlade(double delta) {
 
     }
 
@@ -747,20 +729,75 @@ class Stopping implements HelicopterState {
 
     @Override
     public void moveCopter() {
+
+    }
+
+    @Override
+    public void increaseHelicopterSpeed() {
+
+    }
+
+    @Override
+    public void decreaseHelicopterSpeed() {
+
+    }
+
+    @Override
+    public void moveLeft(int centerX, int centerY) {
+
+    }
+
+    @Override
+    public void moveRight(int centerX, int centerY) {
 
     }
 }
 
 class Ready implements HelicopterState {
-    Helicopter helicopter;
+    private final Helicopter helicopter;
+    private final HeloBlade blade;
+    private final GameText fuelText;
+    private int fuel;
+    private final double bladeSpeed;
 
-    Ready(Helicopter newHelicopter) {
-        helicopter = newHelicopter;
+    private int heading = 90;
+    private double vx;
+    private double vy;
+    private Point2D velocity;
+
+    private BigDecimal speed = BigDecimal.valueOf(0);
+    private BigDecimal changeSpeed = BigDecimal.valueOf(0.1);
+
+    Ready(Helicopter helicopter, HeloBlade blade, double bladeSpeed,
+          int fuel,
+          GameText fuelText) {
+        this.helicopter = helicopter;
+        this.blade = blade;
+        this.fuel = fuel;
+        this.fuelText = fuelText;
+        this.bladeSpeed = bladeSpeed;
+
+        vx = 0;
+        vy = 0;
+
+        System.out.println("Ready");
+        velocity = new Point2D(0, 0);
     }
 
     @Override
     public void toggleIgnition() {
 
+    }
+
+    @Override
+    public void updateFuel() {
+        fuel -= 5 * speed.doubleValue();
+        fuelText.setGameText("F:" + fuel);
+    }
+
+    @Override
+    public void updateBlade(double delta) {
+        blade.setRotate(blade.getRotate() + bladeSpeed);
     }
 
     @Override
@@ -770,9 +807,45 @@ class Ready implements HelicopterState {
 
     @Override
     public void moveCopter() {
+        vx = speed.doubleValue() * Math.cos(Math.toRadians(heading));
+        vy = speed.doubleValue() * Math.sin(Math.toRadians(heading));
 
+        velocity = velocity.add(vx, vy);
+        helicopter.translate(velocity.getX(), velocity.getY());
+    }
+
+    @Override
+    public void increaseHelicopterSpeed() {
+        if (speed.doubleValue() < 10.0) {
+            speed = speed.add(changeSpeed);
+        }
+    }
+
+    @Override
+    public void decreaseHelicopterSpeed() {
+        if (speed.doubleValue() > -2) {
+            speed = speed.subtract(changeSpeed);
+        }
+    }
+
+    @Override
+    public void moveLeft(int centerX, int centerY) {
+        if (speed.doubleValue() != 0) {
+            heading += 15;
+            helicopter.rotate(helicopter.getMyRotation() + 15, centerX, centerY);
+        }
+    }
+
+    @Override
+    public void moveRight(int centerX, int centerY) {
+        if (speed.doubleValue() != 0) {
+            heading -= 15;
+            helicopter.rotate(helicopter.getMyRotation() - 15, centerX,
+                    centerY);
+        }
     }
 }
+
 
 interface Updatable {
     void update(double delta);
@@ -794,10 +867,7 @@ class GameText extends GameObject {
     void setGameText(String text) {
         gameText.setText(text);
     }
-
-
-    public void update(double delta) {
-    }
+    public void update(double delta) {}
 }
 
 
