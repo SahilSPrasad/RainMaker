@@ -19,7 +19,6 @@ import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
 import javafx.stage.Stage;
-import org.w3c.dom.ls.LSOutput;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -46,9 +45,10 @@ public class GameApp extends Application {
                 double delta = (nano - old) / 1e9;
                 old = nano;
 
-                game.checkCloudBound();
+                game.checkCloudsBounds();
                 game.handleNumberOfClouds();
                 game.updateGameBounds();
+                game.checkPondAndCloudDistance(delta);
 
 
                 for (Node n : game.getChildren()) {
@@ -57,7 +57,7 @@ public class GameApp extends Application {
                 }
 
 
-                if (game.checkPondWin() || game.checkFuelLost()) {
+                if (game.checkWin() || game.checkFuelLost()) {
                     handleWinLoss(this, stage, game, scene);
                 }
             }
@@ -133,9 +133,9 @@ class Game extends Pane {
     final int fuel = 25000;
 
     ArrayList<Cloud> clouds = new ArrayList<>();
+    ArrayList<Pond> ponds = new ArrayList<>();
     ArrayList<Rectangle> cloudBounds = new ArrayList<>();
 
-    Pond pond = new Pond();
     Helipad helipad = new Helipad(helipadCenterX, helipadCenterY);
     Helicopter helicopter = new Helicopter(fuel, helipadCenterX,
             helipadCenterY);
@@ -151,7 +151,7 @@ class Game extends Pane {
 
     void createGameObjects() {
 
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 5; i++) {
             Cloud cloud = new Cloud();
             Rectangle cloudBound = new Rectangle();
 
@@ -159,13 +159,19 @@ class Game extends Pane {
             this.getChildren().add(cloudBound);
             clouds.add(cloud);
             this.getChildren().add(cloud);
-
         }
+
+        for (int i = 0; i < 3; i++) {
+            Pond pond = new Pond();
+            ponds.add(pond);
+            this.getChildren().add(0, pond);
+        }
+
+
         initializeBounds();
 
-        this.getChildren().addAll(pond, helipad, helicopter,
+        this.getChildren().addAll(helipad, helicopter,
                 helicopterBounds, helipadBounds);
-
 
 
     }
@@ -189,12 +195,15 @@ class Game extends Pane {
     void reset() {
         helicopter.resetHelicopter();
 
-        for (Cloud cloud: clouds) {
+        for (Cloud cloud : clouds) {
             cloud.resetCloud();
         }
 
+        for (Pond pond : ponds) {
+            pond.resetPond();
+        }
 
-        pond.resetPond();
+
     }
 
     void ignition() {
@@ -212,9 +221,37 @@ class Game extends Pane {
         }
     }
 
-    boolean checkPondWin() {
-        //System.out.println(pond.getWaterPercentage());
-        return (int) pond.getWaterPercentage() == 100;
+    void checkPondAndCloudDistance(double delta) {
+
+        for (int i = 0, j = 0; i < clouds.size(); i++, j++) {
+            double distanceX =
+                    clouds.get(i).getBoundsInParent().getCenterX() - ponds.get(j).getBoundsInParent().getCenterX();
+            double maxDistance = ponds.get(j).getMaxDistance();
+
+            if (distanceX > -maxDistance && distanceX < maxDistance) {
+                //System.out.println("within range");
+                if (clouds.get(i).getSeedPercentage() > 20) {
+                    ponds.get(j).increaseWaterAmount(delta);
+                }
+            }
+
+            if (j == 2) j = 0;
+        }
+
+
+    }
+
+    boolean checkWin() {
+
+        //return (int) pond.getWaterPercentage() == 100;
+
+        for (Pond pond : ponds) {
+            if ( (int) pond.getWaterPercentage() != 100)  {
+                return  false;
+            }
+        }
+        System.out.println("won");
+        return true;
     }
 
     boolean checkFuelLost() {
@@ -258,9 +295,7 @@ class Game extends Pane {
     }
 
     void handleNumberOfClouds() {
-
         if (clouds.size() == 1 || clouds.size() == 2) {
-            System.out.println("called");
             addCloudtoScene();
         }
 
@@ -269,42 +304,31 @@ class Game extends Pane {
                 addCloudtoScene();
             }
         }
-
-
-
     }
 
-    void checkCloudBound() {
-
+    void checkCloudsBounds() {
         Iterator<Cloud> itr = clouds.iterator();
-//        for (int i = 0; i < 3; i++) {
-//            if (clouds.get(i).getBoundsInParent().getCenterX() > GameApp.GAME_WIDTH + 20) {
-//                handleNumberOfClouds();
-//            }
-//        }
-
         while (itr.hasNext()) {
             Cloud cloudItr = itr.next();
-            if (cloudItr.getBoundsInParent().getCenterX() > GameApp.GAME_WIDTH + 20) {
+            if (cloudItr.getBoundsInParent().getCenterX() > GameApp.GAME_WIDTH + 60) {
                 itr.remove();
                 this.getChildren().remove(cloudItr);
-                //handleNumberOfClouds();
             }
         }
-
     }
 
     void addCloudtoScene() {
         Cloud tmp = new Cloud();
         clouds.add(tmp);
-        this.getChildren().add(tmp);
+        this.getChildren().add(4, tmp);
     }
 
     void updateGameBounds() {
         translateBounds(helicopterBounds, helicopter.getBoundsInParent());
         translateBounds(helipadBounds, helipad.getBoundsInParent());
 //        for (int i = 0; i < clouds.size(); i++) {
-//            translateBounds(cloudBounds.get(i), clouds.get(i).getBoundsInParent());
+//            translateBounds(cloudBounds.get(i), clouds.get(i)
+//            .getBoundsInParent());
 //        }
     }
 }
@@ -355,8 +379,8 @@ class Pond extends GameObject {
     boolean isWinner = false;
 
     Pond() {
-        pond = new Circle(getRandomNumber(100, 300), getRandomNumber(500, 700),
-                getRandomNumber(15, 30), Color.BLUE);
+        pond = new Circle(getRandomNumber(100, 300), getRandomNumber(300, 700),
+                getRandomNumber(25, 40), Color.BLUE);
         this.waterPercentage = getRandomNumber(0, 25);
         this.scaleX = 1.0;
         this.scaleY = 1.0;
@@ -367,20 +391,24 @@ class Pond extends GameObject {
     }
 
     void increaseWaterAmount(double delta) {
-//        if (relationship.getSeedPercentage() > 30 && waterPercentage < 100) {
-//            scaleX += delta * .10;
-//            scaleY += delta * .10;
-//
-//            waterPercentage = waterPercentage + delta * 10;
-//            waterAmountText.setGameText((int) waterPercentage + "%");
-//            pond.setScaleX(scaleX);
-//            pond.setScaleY(scaleY);
-//
-//        }
+        if (waterPercentage <= 100) {
+            scaleX += delta * .10;
+            scaleY += delta * .10;
+
+            waterPercentage = waterPercentage + delta * 10;
+            waterAmountText.setGameText((int) waterPercentage + "%");
+            pond.setScaleX(scaleX);
+            pond.setScaleY(scaleY);
+        }
+
+    }
+
+    double getMaxDistance() {
+        double maxDistance = pond.getRadius() * 4;
+        return maxDistance;
     }
 
     public void update(double delta) {
-        increaseWaterAmount(delta);
         isWinner = gameWon();
     }
 
@@ -391,15 +419,15 @@ class Pond extends GameObject {
         pond.setScaleY(scaleY);
         waterPercentage = getRandomNumber(0, 25);
         this.getChildren().clear();
-        pond = new Circle(getRandomNumber(100, 300), getRandomNumber(500, 700),
-                getRandomNumber(15, 30), Color.BLUE);
+        pond = new Circle(getRandomNumber(100, 300), getRandomNumber(300, 700),
+                getRandomNumber(25, 40), Color.BLUE);
         waterAmountText = new GameText((int) waterPercentage + "%", Color.WHITE,
                 (int) pond.getCenterX() - 7,
                 (int) pond.getCenterY() + 5);
         this.getChildren().addAll(pond, waterAmountText);
     }
 
-    public double getWaterPercentage() {
+    double getWaterPercentage() {
         return waterPercentage;
     }
 
@@ -418,6 +446,7 @@ class Cloud extends GameObject {
     private GameText cloudSeedText;
 
     private final int cloudHeading = 45;
+    private final double windSpeed = .5;
     private double vx;
     private double vy;
     private Point2D velocity;
@@ -427,14 +456,14 @@ class Cloud extends GameObject {
         this.g = 255;
         this.b = 255;
         cloudColor = Color.rgb(250, 250, 250);
-        cloud = new Circle(getRandomNumber(-400, -20), getRandomNumber(500,
+        cloud = new Circle(getRandomNumber(-400, -20), getRandomNumber(300,
                 700),
-                getRandomNumber(30, 45), Color.WHITE);
+                getRandomNumber(30, 60), Color.WHITE);
         cloudSeedText = new GameText(seedPercentage + "%", Color.BLACK,
                 (int) cloud.getCenterX() - 7,
                 (int) cloud.getCenterY() + 5);
 
-        velocity = new Point2D(0,0);
+        velocity = new Point2D(0, 0);
         this.getChildren().addAll(cloud, cloudSeedText);
     }
 
@@ -460,13 +489,14 @@ class Cloud extends GameObject {
         b = 255;
         cloud.setFill(cloudColor);
 
-        cloud = new Circle(getRandomNumber(-100, -20), getRandomNumber(400, 700),
+        cloud = new Circle(getRandomNumber(-100, -20), getRandomNumber(400,
+                700),
                 getRandomNumber(30, 45), cloudColor);
         cloudSeedText = new GameText(seedPercentage + "%", Color.BLACK,
                 (int) cloud.getCenterX() - 7,
                 (int) cloud.getCenterY() + 5);
 
-        velocity = new Point2D(0,0);
+        velocity = new Point2D(0, 0);
         vx = 0;
         vy = 0;
         this.getChildren().addAll(cloud, cloudSeedText);
@@ -474,8 +504,8 @@ class Cloud extends GameObject {
     }
 
     void moveCloudLeftToRight() {
-        vx = 1 * Math.cos(Math.toRadians(0));
-        vy = 1 * Math.sin(Math.toRadians(0));
+        vx = windSpeed * Math.cos(Math.toRadians(0));
+        vy = windSpeed * Math.sin(Math.toRadians(0));
 
         velocity = velocity.add(vx, vy);
         this.translate(velocity.getX(), velocity.getY());
