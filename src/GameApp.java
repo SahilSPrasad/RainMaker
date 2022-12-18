@@ -12,7 +12,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
-import javafx.scene.shape.Circle;
+import javafx.scene.shape.*;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.scene.transform.Rotate;
@@ -20,6 +20,8 @@ import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
 import javafx.stage.Stage;
 
+import java.awt.*;
+import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -27,7 +29,7 @@ import java.util.Iterator;
 public class GameApp extends Application {
 
     final static int GAME_HEIGHT = 800;
-    final static int GAME_WIDTH = 400;
+    final static int GAME_WIDTH = 800;
 
     @Override
     public void start(Stage stage) {
@@ -57,9 +59,9 @@ public class GameApp extends Application {
                 }
 
 
-                if (game.checkWin() || game.checkFuelLost()) {
-                    handleWinLoss(this, stage, game, scene);
-                }
+//                if (game.checkWin() || game.checkFuelLost()) {
+//                    handleWinLoss(this, stage, game, scene);
+//                }
             }
         };
 
@@ -128,7 +130,7 @@ public class GameApp extends Application {
 
 class Game extends Pane {
 
-    int helipadCenterX = 195;
+    int helipadCenterX = 400;
     int helipadCenterY = 90;
     final int fuel = 25000;
 
@@ -167,6 +169,8 @@ class Game extends Pane {
             this.getChildren().add(0, pond);
         }
 
+
+       // System.out.println(cloud.getPointOnEllipse(15));
 
         initializeBounds();
 
@@ -243,8 +247,6 @@ class Game extends Pane {
 
     boolean checkWin() {
 
-        //return (int) pond.getWaterPercentage() == 100;
-
         for (Pond pond : ponds) {
             if ( (int) pond.getWaterPercentage() != 100)  {
                 return  false;
@@ -255,8 +257,7 @@ class Game extends Pane {
     }
 
     boolean checkFuelLost() {
-        //System.out.println(helicopter.getFuel());
-        return helicopter.getFuel() < 0;
+        return helicopter.getCurrentState().getFuel() < 0;
     }
 
 
@@ -296,12 +297,12 @@ class Game extends Pane {
 
     void handleNumberOfClouds() {
         if (clouds.size() == 1 || clouds.size() == 2) {
-            addCloudtoScene();
+            addCloudToScene();
         }
 
         if (clouds.size() == 3 || clouds.size() == 4) {
             if (Math.random() < .5) {
-                addCloudtoScene();
+                addCloudToScene();
             }
         }
     }
@@ -317,7 +318,7 @@ class Game extends Pane {
         }
     }
 
-    void addCloudtoScene() {
+    void addCloudToScene() {
         Cloud tmp = new Cloud();
         clouds.add(tmp);
         this.getChildren().add(4, tmp);
@@ -379,7 +380,7 @@ class Pond extends GameObject {
     boolean isWinner = false;
 
     Pond() {
-        pond = new Circle(getRandomNumber(100, 300), getRandomNumber(300, 700),
+        pond = new Circle(getRandomNumber(50, 600), getRandomNumber(250, 700),
                 getRandomNumber(25, 40), Color.BLUE);
         this.waterPercentage = getRandomNumber(0, 25);
         this.scaleX = 1.0;
@@ -404,8 +405,7 @@ class Pond extends GameObject {
     }
 
     double getMaxDistance() {
-        double maxDistance = pond.getRadius() * 4;
-        return maxDistance;
+        return pond.getRadius() * 4;
     }
 
     public void update(double delta) {
@@ -419,7 +419,7 @@ class Pond extends GameObject {
         pond.setScaleY(scaleY);
         waterPercentage = getRandomNumber(0, 25);
         this.getChildren().clear();
-        pond = new Circle(getRandomNumber(100, 300), getRandomNumber(300, 700),
+        pond = new Circle(getRandomNumber(50, 600), getRandomNumber(250, 700),
                 getRandomNumber(25, 40), Color.BLUE);
         waterAmountText = new GameText((int) waterPercentage + "%", Color.WHITE,
                 (int) pond.getCenterX() - 7,
@@ -441,12 +441,10 @@ class Cloud extends GameObject {
     private double seedPercentage = 0;
     Color cloudColor;
 
-    Circle cloud;
+    BezierOval cloud;
     int r, g, b;
     private GameText cloudSeedText;
 
-    private final int cloudHeading = 45;
-    private final double windSpeed = .5;
     private double vx;
     private double vy;
     private Point2D velocity;
@@ -456,9 +454,7 @@ class Cloud extends GameObject {
         this.g = 255;
         this.b = 255;
         cloudColor = Color.rgb(250, 250, 250);
-        cloud = new Circle(getRandomNumber(-400, -20), getRandomNumber(300,
-                700),
-                getRandomNumber(30, 60), Color.WHITE);
+        cloud = new BezierOval();
         cloudSeedText = new GameText(seedPercentage + "%", Color.BLACK,
                 (int) cloud.getCenterX() - 7,
                 (int) cloud.getCenterY() + 5);
@@ -468,7 +464,6 @@ class Cloud extends GameObject {
     }
 
     void seedCloud() {
-
         if (seedPercentage < 100) {
             seedPercentage++;
             r -= 2;
@@ -476,7 +471,7 @@ class Cloud extends GameObject {
             b -= 2;
             cloudColor = Color.rgb(r, g, b);
             cloud.setFill(cloudColor);
-            cloud.setStroke(cloudColor);
+            //cloud.setStroke(cloudColor);
         }
     }
 
@@ -489,9 +484,7 @@ class Cloud extends GameObject {
         b = 255;
         cloud.setFill(cloudColor);
 
-        cloud = new Circle(getRandomNumber(-100, -20), getRandomNumber(400,
-                700),
-                getRandomNumber(30, 45), cloudColor);
+        cloud = new BezierOval();
         cloudSeedText = new GameText(seedPercentage + "%", Color.BLACK,
                 (int) cloud.getCenterX() - 7,
                 (int) cloud.getCenterY() + 5);
@@ -500,10 +493,10 @@ class Cloud extends GameObject {
         vx = 0;
         vy = 0;
         this.getChildren().addAll(cloud, cloudSeedText);
-
     }
 
     void moveCloudLeftToRight() {
+        double windSpeed = .5;
         vx = windSpeed * Math.cos(Math.toRadians(0));
         vy = windSpeed * Math.sin(Math.toRadians(0));
 
@@ -534,13 +527,101 @@ class Cloud extends GameObject {
     int getSeedPercentage() {
         return (int) seedPercentage;
     }
+}
 
+class BezierOval extends Group {
+    Ellipse ellipse;
+    Ellipse perimeter;
+    double radiusX;
+    double radiusY;
+    int increment;
+
+    ArrayList<QuadCurve> curves = new ArrayList<>();
+
+    double perimeterRadiusX;
+    double perimeterRadiusY;
+
+    BezierOval() {
+        ellipse = new Ellipse(getRandomNumber(-400, -20),getRandomNumber(300,
+         700), getRandomNumber(40, 80),getRandomNumber(30, 50));
+        ellipse.setFill(Color.WHITE);
+
+        perimeter = new Ellipse(ellipse.getCenterX(), ellipse.getCenterY(),
+                ellipse.getRadiusX() + 20, ellipse.getRadiusY() + 20);
+        perimeter.setFill(Color.TRANSPARENT);
+
+        this.radiusX = ellipse.getRadiusX();
+        this.radiusY = ellipse.getRadiusY();
+
+        this.perimeterRadiusX = perimeter.getRadiusX();
+        this.perimeterRadiusY = perimeter.getRadiusY();
+        this.increment = getRandomNumber(20,50);
+        createCurvesOnCloud();
+        this.getChildren().addAll(ellipse, perimeter);
+
+    }
+
+    void setFill(Color color) {
+        ellipse.setFill(color);
+        for (QuadCurve curve: curves) {
+            curve.setFill(color);
+        }
+    }
+
+    double getCenterX() {return ellipse.getCenterX();}
+    double getCenterY()  {return ellipse.getCenterY();}
+
+    public int getRandomNumber(int min, int max) {
+        return (int) ((Math.random() * (max - min)) + min);
+    }
+
+    Point2D createPointOnEllipse(double theta) {
+        return getPoint2D(theta, radiusX, radiusY);
+    }
+
+    Point2D createControlPoint(double theta) {
+        return getPoint2D(theta, perimeterRadiusX, perimeterRadiusY);
+    }
+
+    private Point2D getPoint2D(double theta, double perimeterRadiusX,
+                               double perimeterRadiusY) {
+        Point2D point = new Point2D(ellipse.getCenterX(),
+                ellipse.getCenterY());
+        double x = Math.sin(Math.toRadians(theta)) * perimeterRadiusX;
+        double y = Math.cos(Math.toRadians(theta)) * perimeterRadiusY;
+        point = point.add(x,y);
+        return point;
+    }
+
+    void createBezierCurve(double theta) {
+        QuadCurve curve = new QuadCurve();
+        curves.add(curve);
+        curve.setFill(Color.WHITE);
+        //curve.setStroke(Color.BLACK);
+        Point2D start = createPointOnEllipse(theta);
+        Point2D controlPoint = createControlPoint(theta + increment);
+        Point2D end = createPointOnEllipse(theta + increment);
+
+        curve.setStartX(start.getX());
+        curve.setStartY(start.getY());
+        curve.setEndX(end.getX());
+        curve.setEndY(end.getY());
+        curve.setControlX(controlPoint.getX());
+        curve.setControlY(controlPoint.getY());
+
+        this.getChildren().add(curve);
+    }
+
+    void createCurvesOnCloud() {
+        for (int i = 0; i < 400; i+=increment)
+            createBezierCurve(i);
+    }
 }
 
 class Helipad extends GameObject {
 
     Helipad(int padCenterX, int padCenterY) {
-        Rectangle border = new Rectangle(145, 40, 100, 100);
+        Rectangle border = new Rectangle(350, 40, 100, 100);
         border.setFill(Color.TRANSPARENT);
         border.setStroke(Color.WHITE);
 
@@ -577,7 +658,7 @@ class Helicopter extends GameObject {
         body = new HeloBody(centerX, centerY);
         blade = new HeloBlade(centerX, centerY);
 
-        fuelText = new GameText("F:" + fuel, Color.YELLOW, 175, 55);
+        fuelText = new GameText("F:" + fuel, Color.YELLOW, 380, 55);
 
 
         off = new Off(this, blade, fuelText, fuel);
@@ -597,6 +678,10 @@ class Helicopter extends GameObject {
     void decreaseHelicopterSpeed() {
         helicopterState.decreaseHelicopterSpeed();
 
+    }
+
+    HelicopterState getCurrentState() {
+        return helicopterState;
     }
 
     void moveHelicopterRight() {
@@ -633,10 +718,6 @@ class Helicopter extends GameObject {
 
     void toggleIgnition() {
         helicopterState.toggleIgnition();
-    }
-
-    int getFuel() {
-        return fuel;
     }
 
     public void update(double delta) {
@@ -699,7 +780,7 @@ interface HelicopterState {
 
     void updateBlade(double delta);
 
-    void seedClouds();
+    int getFuel();
 
     void moveCopter();
 
@@ -710,6 +791,8 @@ interface HelicopterState {
     void moveLeft(int centerX, int centerY);
 
     void moveRight(int centerX, int centerY);
+
+    
 }
 
 class Off implements HelicopterState {
@@ -748,7 +831,8 @@ class Off implements HelicopterState {
     }
 
     @Override
-    public void seedClouds() {
+    public int getFuel() {
+        return fuel;
     }
 
     @Override
@@ -814,8 +898,10 @@ class Starting implements HelicopterState {
     }
 
     @Override
-    public void seedClouds() {
+    public int getFuel() {
+        return fuel;
     }
+
 
     @Override
     public void moveCopter() {
@@ -842,7 +928,7 @@ class Stopping implements HelicopterState {
     private final Helicopter helicopter;
     private final HeloBlade blade;
     private final GameText fuelText;
-    private int fuel;
+    private final int fuel;
     private double bladeSpeed;
 
 
@@ -880,8 +966,8 @@ class Stopping implements HelicopterState {
     }
 
     @Override
-    public void seedClouds() {
-
+    public int getFuel() {
+        return fuel;
     }
 
     @Override
@@ -919,7 +1005,7 @@ class Ready implements HelicopterState {
     private Point2D velocity;
 
     private BigDecimal speed = BigDecimal.valueOf(0);
-    private BigDecimal changeSpeed = BigDecimal.valueOf(0.1);
+    private final BigDecimal changeSpeed = BigDecimal.valueOf(0.1);
 
     Ready(Helicopter helicopter, HeloBlade blade, double bladeSpeed,
           int fuel,
@@ -945,7 +1031,12 @@ class Ready implements HelicopterState {
 
     @Override
     public void updateFuel() {
+        if (speed.doubleValue() == 0) {
+            fuel -= 5 * .1;
+        }
+
         fuel -= 5 * speed.doubleValue();
+
         fuelText.setGameText("F:" + fuel);
     }
 
@@ -955,8 +1046,8 @@ class Ready implements HelicopterState {
     }
 
     @Override
-    public void seedClouds() {
-
+    public int getFuel() {
+        return fuel;
     }
 
     @Override
