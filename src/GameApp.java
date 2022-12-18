@@ -20,8 +20,6 @@ import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
 import javafx.stage.Stage;
 
-import java.awt.*;
-import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -146,6 +144,7 @@ class Game extends Pane {
     private boolean toggleBounds = false;
     Rectangle helicopterBounds = new Rectangle();
     Rectangle helipadBounds = new Rectangle();
+    WindSubject windSubject = new WindSubject();
 
 
     Game() {
@@ -154,10 +153,12 @@ class Game extends Pane {
 
     void createGameObjects() {
 
+        //Set wind speed for all observers
+
+
         for (int i = 0; i < 5; i++) {
-            WindSubject windSubject = new WindSubject();
+
             Cloud cloud = new Cloud(windSubject);
-            windSubject.setWindSpeed(GameApp.WIND_SPEED);
 
             Rectangle cloudBound = new Rectangle();
 
@@ -167,6 +168,8 @@ class Game extends Pane {
             this.getChildren().add(cloud);
         }
 
+        windSubject.setWindSpeed(GameApp.WIND_SPEED);
+
         for (int i = 0; i < 3; i++) {
             Pond pond = new Pond();
             ponds.add(pond);
@@ -175,12 +178,10 @@ class Game extends Pane {
 
 
        // System.out.println(cloud.getPointOnEllipse(15));
-
         initializeBounds();
 
         this.getChildren().addAll(helipad, helicopter,
                 helicopterBounds, helipadBounds);
-
 
     }
 
@@ -202,16 +203,12 @@ class Game extends Pane {
 
     void reset() {
         helicopter.resetHelicopter();
-
         for (Cloud cloud : clouds) {
             cloud.resetCloud();
         }
-
         for (Pond pond : ponds) {
             pond.resetPond();
         }
-
-
     }
 
     void ignition() {
@@ -312,7 +309,6 @@ class Game extends Pane {
     }
 
     void checkCloudsBounds() {
-        WindSubject windSubject = new WindSubject();
         Iterator<Cloud> itr = clouds.iterator();
         while (itr.hasNext()) {
             Cloud cloudItr = itr.next();
@@ -325,9 +321,8 @@ class Game extends Pane {
     }
 
     void addCloudToScene() {
-        WindSubject windSubject = new WindSubject();
         Cloud tmp = new Cloud(windSubject);
-        windSubject.setWindSpeed(GameApp.WIND_SPEED);
+        windSubject.register(tmp);
         clouds.add(tmp);
         this.getChildren().add(4, tmp);
     }
@@ -445,13 +440,13 @@ class Pond extends GameObject {
 }
 
 interface Observer {
-    public void updateObserver(double windSpeed);
+    void updateObserver(double windSpeed);
 }
 
 interface Subject {
-    public void register(Observer o);
-    public void unregister(Observer o);
-    public void notifyObserver();
+    void register(Observer o);
+    void unregister(Observer o);
+    void notifyObserver();
 }
 
 class WindSubject implements Subject {
@@ -459,7 +454,7 @@ class WindSubject implements Subject {
     private double windSpeed;
 
     WindSubject() {
-        observers = new ArrayList<Observer>();
+        observers = new ArrayList<>();
     }
 
     @Override
