@@ -30,6 +30,7 @@ public class GameApp extends Application {
 
     final static int GAME_HEIGHT = 800;
     final static int GAME_WIDTH = 800;
+    final static double WIND_SPEED = .6;
 
     @Override
     public void start(Stage stage) {
@@ -154,7 +155,10 @@ class Game extends Pane {
     void createGameObjects() {
 
         for (int i = 0; i < 5; i++) {
-            Cloud cloud = new Cloud();
+            WindSubject windSubject = new WindSubject();
+            Cloud cloud = new Cloud(windSubject);
+            windSubject.setWindSpeed(GameApp.WIND_SPEED);
+
             Rectangle cloudBound = new Rectangle();
 
             cloudBounds.add(cloudBound);
@@ -308,18 +312,22 @@ class Game extends Pane {
     }
 
     void checkCloudsBounds() {
+        WindSubject windSubject = new WindSubject();
         Iterator<Cloud> itr = clouds.iterator();
         while (itr.hasNext()) {
             Cloud cloudItr = itr.next();
             if (cloudItr.getBoundsInParent().getCenterX() > GameApp.GAME_WIDTH + 60) {
                 itr.remove();
+                windSubject.unregister(cloudItr);
                 this.getChildren().remove(cloudItr);
             }
         }
     }
 
     void addCloudToScene() {
-        Cloud tmp = new Cloud();
+        WindSubject windSubject = new WindSubject();
+        Cloud tmp = new Cloud(windSubject);
+        windSubject.setWindSpeed(GameApp.WIND_SPEED);
         clouds.add(tmp);
         this.getChildren().add(4, tmp);
     }
@@ -436,10 +444,52 @@ class Pond extends GameObject {
     }
 }
 
+interface Observer {
+    public void updateObserver(double windSpeed);
+}
 
-class Cloud extends GameObject {
+interface Subject {
+    public void register(Observer o);
+    public void unregister(Observer o);
+    public void notifyObserver();
+}
+
+class WindSubject implements Subject {
+    private ArrayList<Observer> observers;
+    private double windSpeed;
+
+    WindSubject() {
+        observers = new ArrayList<Observer>();
+    }
+
+    @Override
+    public void register(Observer o) {
+        observers.add(o);
+    }
+
+    @Override
+    public void unregister(Observer o) {
+        observers.remove(o);
+    }
+
+    @Override
+    public void notifyObserver() {
+        for(Observer observer : observers){
+            observer.updateObserver(windSpeed);
+        }
+    }
+
+    public void setWindSpeed(double windSpeed){
+        this.windSpeed = windSpeed;
+        notifyObserver();
+    }
+}
+
+
+class Cloud extends GameObject implements Observer {
     private double seedPercentage = 0;
     Color cloudColor;
+    private double windSpeed;
 
     BezierOval cloud;
     int r, g, b;
@@ -449,7 +499,9 @@ class Cloud extends GameObject {
     private double vy;
     private Point2D velocity;
 
-    Cloud() {
+    private Subject windSubject;
+
+    Cloud(Subject windSubject) {
         this.r = 255;
         this.g = 255;
         this.b = 255;
@@ -458,6 +510,10 @@ class Cloud extends GameObject {
         cloudSeedText = new GameText(seedPercentage + "%", Color.BLACK,
                 (int) cloud.getCenterX() - 7,
                 (int) cloud.getCenterY() + 5);
+
+        this.windSubject = windSubject;
+
+        windSubject.register(this);
 
         velocity = new Point2D(0, 0);
         this.getChildren().addAll(cloud, cloudSeedText);
@@ -496,7 +552,7 @@ class Cloud extends GameObject {
     }
 
     void moveCloudLeftToRight() {
-        double windSpeed = .5;
+
         vx = windSpeed * Math.cos(Math.toRadians(0));
         vy = windSpeed * Math.sin(Math.toRadians(0));
 
@@ -526,6 +582,11 @@ class Cloud extends GameObject {
 
     int getSeedPercentage() {
         return (int) seedPercentage;
+    }
+
+    @Override
+    public void updateObserver(double windSpeed) {
+        this.windSpeed = windSpeed;
     }
 }
 
