@@ -30,7 +30,7 @@ public class GameApp extends Application {
 
     final static int GAME_HEIGHT = 800;
     final static int GAME_WIDTH = 800;
-    final static double WIND_SPEED = .6;
+    final static double WIND_SPEED = .5;
 
     @Override
     public void start(Stage stage) {
@@ -63,9 +63,9 @@ public class GameApp extends Application {
                 }
 
 
-//                if (game.checkWin() || game.checkFuelLost()) {
-//                    handleWinLoss(this, stage, game, scene);
-//                }
+                if (game.checkWin() || game.checkFuelLost()) {
+                    handleWinLoss(this, stage, game, scene);
+                }
             }
         };
 
@@ -153,8 +153,6 @@ class Game extends Pane {
     WindSubject windSubject = new WindSubject();
 
 
-
-
     Game() {
         createGameObjects();
     }
@@ -213,6 +211,12 @@ class Game extends Pane {
         for (Pond pond : ponds) {
             pond.resetPond();
         }
+
+        for (Blimp blimp : blimps) {
+            blimp.resetBlimp();
+        }
+
+        blimps.clear();
     }
 
     void ignition() {
@@ -233,17 +237,20 @@ class Game extends Pane {
     void checkPondAndCloudDistance(double delta) {
 
         for (int i = 0, j = 0; i < clouds.size(); i++, j++) {
-            double distanceX =
-                    clouds.get(i).getBoundsInParent().getCenterX() - ponds.get(j).getBoundsInParent().getCenterX();
             double maxDistance = ponds.get(j).getMaxDistance();
+            Point2D cloudPoint =
+                    new Point2D(clouds.get(i).getBoundsInParent().getCenterX(),
+                            clouds.get(i).getBoundsInParent().getCenterY());
+            Point2D pondPoint =
+                    new Point2D(ponds.get(j).getBoundsInParent().getCenterX(),
+                            ponds.get(j).getBoundsInParent().getCenterY());
+            double distance = cloudPoint.distance(pondPoint);
 
-            if (distanceX > -maxDistance && distanceX < maxDistance) {
-                //System.out.println("within range");
+            if (distance < maxDistance) {
                 if (clouds.get(i).getSeedPercentage() > 20) {
                     ponds.get(j).increaseWaterAmount(delta);
                 }
             }
-
             if (j == 2) j = 0;
         }
 
@@ -332,17 +339,16 @@ class Game extends Pane {
     }
 
     void createBlimpRandomly() {
-        int max = 2000;
+        int max = 3000;
         int min = 1;
         int range = max - min + 1;
 
-        // generate random numbers within 1 to 10
         int rand = (int) (Math.random() * range) + min;
         if (rand == 50) {
-            System.out.println("added");
+            System.out.println("BLIMP ADDED");
             Blimp tmp = new Blimp();
             blimps.add(tmp);
-            this.getChildren().add(6,tmp);
+            this.getChildren().add(6, tmp);
         }
     }
 
@@ -526,8 +532,122 @@ class WindSubject implements Subject {
     }
 }
 
+interface TransientState {
+    void moveLeftToRight(double windSpeed);
+}
 
-class Cloud extends GameObject implements Observer {
+class Created implements TransientState {
+    TransientGameObject transientGameObject;
+    private double vx;
+    private double vy;
+    private Point2D velocity;
+
+    Created(TransientGameObject transientGameObject) {
+        velocity = new Point2D(0, 0);
+        this.transientGameObject = transientGameObject;
+    }
+
+    @Override
+    public void moveLeftToRight(double windSpeed) {
+        vx = windSpeed * Math.cos(Math.toRadians(0));
+        vy = windSpeed * Math.sin(Math.toRadians(0));
+
+        velocity = velocity.add(vx, vy);
+        transientGameObject.translate(velocity.getX(), velocity.getY());
+
+        if (transientGameObject.getBoundsInParent().getCenterX() > 0) {
+            transientGameObject.setTransientState(new InView(transientGameObject, vx, vy, velocity));
+        }
+    }
+
+}
+
+class InView implements TransientState {
+    TransientGameObject transientGameObject;
+    private double vx;
+    private double vy;
+    private Point2D velocity;
+
+    int r, g, b;
+    Color cloudColor;
+    private double seedPercentage;
+
+    InView(TransientGameObject transientGameObject, double vx, double vy,
+           Point2D velocity) {
+        this.transientGameObject = transientGameObject;
+        this.vx = vx;
+        this.vy = vy;
+        this.velocity = velocity;
+        this.seedPercentage = 0;
+
+        this.r = 255;
+        this.g = 255;
+        this.b = 255;
+    }
+
+    @Override
+    public void moveLeftToRight(double windSpeed) {
+        vx = windSpeed * Math.cos(Math.toRadians(0));
+        vy = windSpeed * Math.sin(Math.toRadians(0));
+
+        velocity = velocity.add(vx, vy);
+        transientGameObject.translate(velocity.getX(), velocity.getY());
+
+        if (transientGameObject.getBoundsInParent().getCenterX() > GameApp.GAME_WIDTH + 60) {
+            transientGameObject.setTransientState(new Dead());
+        }
+
+    }
+
+}
+
+class Dead implements TransientState {
+
+    Dead() {
+
+    }
+
+    @Override
+    public void moveLeftToRight(double windSpeed) {
+    }
+
+}
+
+class TransientGameObject extends GameObject {
+    private double vx;
+    private double vy;
+    private Point2D velocity;
+
+
+    TransientState transientState;
+
+    TransientGameObject() {
+        transientState = new Created(this);
+        velocity = new Point2D(0, 0);
+
+    }
+
+    void setTransientState(TransientState transientState) {
+        this.transientState = transientState;
+    }
+
+    void moveLeftToRight(double windSpeed) {
+        transientState.moveLeftToRight(windSpeed);
+    }
+
+    void resetTransient() {
+        velocity = new Point2D(0, 0);
+        vx = 0;
+        vy = 0;
+        transientState = new Created(this);
+    }
+
+    @Override
+    public void update(double delta) {
+    }
+}
+
+class Cloud extends TransientGameObject implements Observer {
     private double seedPercentage = 0;
     Color cloudColor;
     private double windSpeed;
@@ -536,13 +656,10 @@ class Cloud extends GameObject implements Observer {
     int r, g, b;
     private GameText cloudSeedText;
 
-    private double vx;
-    private double vy;
-    private Point2D velocity;
-
     private Subject windSubject;
 
     Cloud(Subject windSubject) {
+        super();
         this.r = 255;
         this.g = 255;
         this.b = 255;
@@ -551,12 +668,10 @@ class Cloud extends GameObject implements Observer {
         cloudSeedText = new GameText(seedPercentage + "%", Color.BLACK,
                 (int) cloud.getCenterX() - 7,
                 (int) cloud.getCenterY() + 5);
-
         this.windSubject = windSubject;
 
         windSubject.register(this);
 
-        velocity = new Point2D(0, 0);
         this.getChildren().addAll(cloud, cloudSeedText);
     }
 
@@ -568,11 +683,11 @@ class Cloud extends GameObject implements Observer {
             b -= 2;
             cloudColor = Color.rgb(r, g, b);
             cloud.setFill(cloudColor);
-            //cloud.setStroke(cloudColor);
         }
     }
 
     void resetCloud() {
+        resetTransient();
         this.getChildren().clear();
         seedPercentage = 0;
         cloudColor = Color.rgb(250, 250, 250);
@@ -580,29 +695,17 @@ class Cloud extends GameObject implements Observer {
         g = 255;
         b = 255;
         cloud.setFill(cloudColor);
-
         cloud = new BezierOval();
         cloudSeedText = new GameText(seedPercentage + "%", Color.BLACK,
                 (int) cloud.getCenterX() - 7,
                 (int) cloud.getCenterY() + 5);
 
-        velocity = new Point2D(0, 0);
-        vx = 0;
-        vy = 0;
         this.getChildren().addAll(cloud, cloudSeedText);
     }
 
-    void moveCloudLeftToRight() {
-
-        vx = windSpeed * Math.cos(Math.toRadians(0));
-        vy = windSpeed * Math.sin(Math.toRadians(0));
-
-        velocity = velocity.add(vx, vy);
-        this.translate(velocity.getX(), velocity.getY());
-    }
 
     public void update(double delta) {
-        moveCloudLeftToRight();
+        moveLeftToRight(windSpeed);
         double prev = seedPercentage;
 
         if (seedPercentage > 0) {
@@ -644,7 +747,7 @@ class BezierOval extends Group {
     double perimeterRadiusY;
 
     BezierOval() {
-        ellipse = new Ellipse(getRandomNumber(-500, -50), getRandomNumber(200,
+        ellipse = new Ellipse(getRandomNumber(-600, -50), getRandomNumber(200,
                 700), getRandomNumber(40, 80), getRandomNumber(30, 50));
         ellipse.setFill(Color.WHITE);
 
@@ -743,35 +846,29 @@ class Helipad extends GameObject {
     }
 }
 
-class Blimp extends GameObject {
+class Blimp extends TransientGameObject {
     Image body;
     ImageView imageView;
 
     double fuelAmount;
     GameText fuelText;
 
-    double vx;
-    double vy;
-    Point2D velocity;
-
     Blimp() {
+        super();
         body = new Image("blimp.png");
         imageView = new ImageView();
         imageView.setPreserveRatio(true);
         imageView.setImage(body);
         imageView.setScaleY(-1);
-        imageView.setX(-100);
-        imageView.setY(getRandomNumber(200,500));
+        imageView.setX(-200);
+        imageView.setY(getRandomNumber(200, 500));
         imageView.setFitHeight(300);
         imageView.setFitWidth(300);
         imageView.fitHeightProperty();
-        fuelAmount = getRandomNumber(5000,10000);
+        fuelAmount = getRandomNumber(5000, 10000);
 
-        this.vx = 0;
-        this.vy = 0;
-        this.velocity = new Point2D(0, 0);
-
-        fuelText = new GameText(Integer.toString((int) fuelAmount), Color.YELLOW,
+        fuelText = new GameText(Integer.toString((int) fuelAmount),
+                Color.YELLOW,
                 (int) imageView.getX() + 140
                 , (int) imageView.getY() + 100);
         this.getChildren().addAll(imageView, fuelText);
@@ -789,17 +886,14 @@ class Blimp extends GameObject {
         }
     }
 
-    void moveBlimpLeftToRight() {
-        vx = .3 * Math.cos(Math.toRadians(0));
-        vy = .3 * Math.sin(Math.toRadians(0));
-
-        velocity = velocity.add(vx, vy);
-        this.translate(velocity.getX(), velocity.getY());
+    void resetBlimp() {
+        this.getChildren().clear();
     }
+
 
     @Override
     public void update(double delta) {
-        moveBlimpLeftToRight();
+        moveLeftToRight(.3);
     }
 }
 
