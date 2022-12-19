@@ -5,15 +5,14 @@ import rainmaker.Observer;
 import rainmaker.Subject;
 
 public class Cloud extends TransientGameObject implements Observer {
-    private double seedPercentage = 0;
     Color cloudColor;
-    private double windSpeed;
-
     BezierOval cloud;
     int r, g, b;
+    private double seedPercentage = 0;
+    private double windSpeed;
     private GameText cloudSeedText;
 
-    private Subject windSubject;
+    private final Subject windSubject;
 
     public Cloud(Subject windSubject) {
         super();

@@ -1,7 +1,9 @@
 package rainmaker;
 
 import javafx.geometry.Point2D;
+import javafx.scene.media.AudioClip;
 import javafx.scene.paint.Color;
+import rainmaker.gameobjects.Blimp;
 import rainmaker.gameobjects.TransientGameObject;
 
 public interface TransientState {
@@ -10,13 +12,13 @@ public interface TransientState {
 
 class InView implements TransientState {
     TransientGameObject transientGameObject;
+    int r, g, b;
+    Color cloudColor;
     private double vx;
     private double vy;
     private Point2D velocity;
-
-    int r, g, b;
-    Color cloudColor;
-    private double seedPercentage;
+    private final double seedPercentage;
+    private AudioClip transientAudioClip;
 
     InView(TransientGameObject transientGameObject, double vx, double vy,
            Point2D velocity) {
@@ -29,6 +31,14 @@ class InView implements TransientState {
         this.r = 255;
         this.g = 255;
         this.b = 255;
+
+        if (transientGameObject instanceof Blimp) {
+            transientAudioClip = new AudioClip(this.getClass()
+                    .getResource("\\blimpsound.mp3")
+                    .toExternalForm());
+            transientAudioClip.setVolume(.03);
+            transientAudioClip.play();
+        }
     }
 
     @Override
@@ -42,6 +52,8 @@ class InView implements TransientState {
         if (transientGameObject.getBoundsInParent().getCenterX() > GameApp.GAME_WIDTH + 60) {
             transientGameObject.setTransientState(new Dead());
         }
+
+
 
     }
 

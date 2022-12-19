@@ -5,12 +5,10 @@ import rainmaker.Created;
 import rainmaker.TransientState;
 
 public class TransientGameObject extends GameObject {
+    TransientState transientState;
     private double vx;
     private double vy;
     private Point2D velocity;
-
-
-    TransientState transientState;
 
     TransientGameObject() {
         transientState = new Created(this);

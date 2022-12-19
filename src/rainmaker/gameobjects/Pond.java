@@ -4,16 +4,16 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 
 public class Pond extends GameObject {
-    private double waterPercentage;
-    private GameText waterAmountText;
     double scaleX;
     double scaleY;
     Circle pond;
     boolean isWinner = false;
+    private double waterPercentage;
+    private GameText waterAmountText;
 
     public Pond() {
-        pond = new Circle(getRandomNumber(50, 600), getRandomNumber(250, 700),
-                getRandomNumber(25, 40), Color.BLUE);
+        pond = new Circle(getRandomNumber(200, 600), getRandomNumber(250, 700),
+                getRandomNumber(35, 50), Color.BLUE);
         this.waterPercentage = getRandomNumber(0, 25);
         this.scaleX = 1.0;
         this.scaleY = 1.0;

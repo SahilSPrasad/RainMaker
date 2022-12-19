@@ -1,3 +1,5 @@
 # Project exclude paths
 /out/
 /Log SC/
+/src/META-INF/MANIFEST.MF
+/.idea/artifacts/RainMaker1_0_jar.xml

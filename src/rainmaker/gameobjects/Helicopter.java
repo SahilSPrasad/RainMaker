@@ -6,10 +6,9 @@ import rainmaker.Off;
 
 
 public class Helicopter extends GameObject {
-    GameText fuelText;
-
     private final int centerX;
     private final int centerY;
+    GameText fuelText;
     int fuel;
     boolean refueling = false;
 
@@ -84,6 +83,7 @@ public class Helicopter extends GameObject {
 
     public void resetHelicopter() {
         blade.setRotate(0);
+        helicopterState.stopSounds();
         setHelicopterState(new Off(this, blade, fuelText, 25000));
         this.rotate(getMyRotation() - getMyRotation(), centerX, centerY);
         this.getChildren().clear();

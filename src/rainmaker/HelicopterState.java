@@ -1,6 +1,9 @@
 package rainmaker;
 
 import javafx.geometry.Point2D;
+import javafx.scene.media.AudioClip;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
 import rainmaker.gameobjects.GameText;
 import rainmaker.gameobjects.Helicopter;
 import rainmaker.gameobjects.HeloBlade;
@@ -30,6 +33,8 @@ public interface HelicopterState {
 
     void moveRight(int centerX, int centerY);
 
+    void stopSounds();
+
 
 }
 
@@ -39,6 +44,7 @@ class Starting implements HelicopterState {
     private final GameText fuelText;
     private double fuel;
     private double bladeSpeed;
+    private AudioClip startingSound;
 
     Starting(Helicopter helicopter, HeloBlade blade, double bladeSpeed,
              double fuel,
@@ -50,12 +56,18 @@ class Starting implements HelicopterState {
         this.fuelText = fuelText;
         this.bladeSpeed = bladeSpeed;
         System.out.println("STARTING");
+        startingSound = new AudioClip(this.getClass()
+                .getResource("\\startingSound.mp3")
+                .toExternalForm());
+        startingSound.setVolume(.07);
+        startingSound.play();
     }
 
     @Override
     public void toggleIgnition() {
         helicopter.setHelicopterState(new Stopping(helicopter, blade,
                 bladeSpeed, fuel, fuelText));
+        startingSound.stop();
     }
 
     @Override
@@ -71,11 +83,12 @@ class Starting implements HelicopterState {
 
     @Override
     public void updateBlade(double delta) {
-        bladeSpeed += delta;
+        bladeSpeed += delta * 1.2;
         blade.setRotate(blade.getRotate() + bladeSpeed);
         if (bladeSpeed > 8.0) {
             helicopter.setHelicopterState(new Ready(helicopter, blade,
                     bladeSpeed, fuel, fuelText));
+            startingSound.stop();
         }
     }
 
@@ -103,6 +116,11 @@ class Starting implements HelicopterState {
 
     @Override
     public void moveRight(int centerX, int centerY) {
+    }
+
+    @Override
+    public void stopSounds() {
+        startingSound.stop();
     }
 }
 
@@ -177,22 +195,26 @@ class Stopping implements HelicopterState {
     @Override
     public void moveRight(int centerX, int centerY) {
     }
+
+    @Override
+    public void stopSounds() {
+    }
 }
 
 class Ready implements HelicopterState {
     private final Helicopter helicopter;
     private final HeloBlade blade;
     private final GameText fuelText;
-    private double fuel;
     private final double bladeSpeed;
-
+    private final BigDecimal changeSpeed = BigDecimal.valueOf(0.1);
+    private double fuel;
     private int heading = 90;
     private double vx;
     private double vy;
     private Point2D velocity;
-
     private BigDecimal speed = BigDecimal.valueOf(0);
-    private final BigDecimal changeSpeed = BigDecimal.valueOf(0.1);
+    private Media readySound;
+    private MediaPlayer readySoundPlayer;
 
     Ready(Helicopter helicopter, HeloBlade blade, double bladeSpeed,
           double fuel,
@@ -205,6 +227,13 @@ class Ready implements HelicopterState {
 
         vx = 0;
         vy = 0;
+        readySound =
+                new Media(this.getClass().getResource("\\readysound.mp3")
+                                .toExternalForm());
+        readySoundPlayer = new MediaPlayer(readySound);
+        readySoundPlayer.setCycleCount(MediaPlayer.INDEFINITE);
+        readySoundPlayer.setVolume(.03);
+        readySoundPlayer.play();
 
         System.out.println("READY");
         velocity = new Point2D(0, 0);
@@ -214,6 +243,7 @@ class Ready implements HelicopterState {
     public void toggleIgnition() {
         helicopter.setHelicopterState(new Stopping(helicopter, blade,
                 bladeSpeed, fuel, fuelText));
+        readySoundPlayer.stop();
     }
 
     @Override
@@ -229,7 +259,6 @@ class Ready implements HelicopterState {
 
     @Override
     public void addFuel(double delta) {
-
         fuel = fuel + delta * 500;
         fuelText.setGameText("F:" + (int) fuel);
     }
@@ -284,6 +313,11 @@ class Ready implements HelicopterState {
             helicopter.rotate(helicopter.getMyRotation() - 15, centerX,
                     centerY);
         }
+    }
+
+    @Override
+    public void stopSounds() {
+        readySoundPlayer.stop();
     }
 }
 

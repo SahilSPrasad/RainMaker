@@ -68,4 +68,9 @@ public class Off implements HelicopterState {
     @Override
     public void moveRight(int centerX, int centerY) {
     }
+
+    @Override
+    public void stopSounds() {
+
+    }
 }

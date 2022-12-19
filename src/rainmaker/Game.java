@@ -3,6 +3,7 @@ package rainmaker;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.layout.Pane;
+import javafx.scene.media.AudioClip;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import rainmaker.gameobjects.*;
@@ -12,58 +13,65 @@ import java.util.Iterator;
 
 class Game extends Pane {
 
-    int helipadCenterX = 400;
-    int helipadCenterY = 90;
-    final int fuel = 25000;
+    private final int fuel = 25000;
+    private int helipadCenterX = 400;
+    private int helipadCenterY = 90;
+    private ArrayList<Cloud> clouds = new ArrayList<>();
+    private ArrayList<Pond> ponds = new ArrayList<>();
+    private  ArrayList<Rectangle> cloudBounds = new ArrayList<>();
+    private ArrayList<Blimp> blimps = new ArrayList<>();
 
-    ArrayList<Cloud> clouds = new ArrayList<>();
-    ArrayList<Pond> ponds = new ArrayList<>();
-    ArrayList<Rectangle> cloudBounds = new ArrayList<>();
-    ArrayList<Blimp> blimps = new ArrayList<>();
-
-    Helipad helipad = new Helipad(helipadCenterX, helipadCenterY);
-    Helicopter helicopter = new Helicopter(fuel, helipadCenterX,
+    private Helipad helipad = new Helipad(helipadCenterX, helipadCenterY);
+    private Helicopter helicopter = new Helicopter(fuel, helipadCenterX,
             helipadCenterY);
-
-
+    private Rectangle helicopterBounds = new Rectangle();
+    private Rectangle helipadBounds = new Rectangle();
+    private  WindSubject windSubject = new WindSubject();
     private boolean toggleBounds = false;
-    Rectangle helicopterBounds = new Rectangle();
-    Rectangle helipadBounds = new Rectangle();
-    WindSubject windSubject = new WindSubject();
+    private AudioClip seedingSound;
+
 
 
     Game() {
-        createGameObjects();
+        init();
     }
 
-    void createGameObjects() {
+    void init() {
+        initializeClouds();
+        initializePonds();
+        createSeedingSound();
+        initializeBounds();
 
+        this.getChildren().addAll(helipad, helicopter,
+                helicopterBounds, helipadBounds);
+        //Set wind speed for all observers(clouds)
+        windSubject.setWindSpeed(GameApp.WIND_SPEED);
+    }
+
+    void initializeClouds() {
         for (int i = 0; i < 5; i++) {
-
             Cloud cloud = new Cloud(windSubject);
-
             Rectangle cloudBound = new Rectangle();
-
             cloudBounds.add(cloudBound);
-            this.getChildren().add(cloudBound);
+            //this.getChildren().add(cloudBound);
             clouds.add(cloud);
             this.getChildren().add(cloud);
         }
+    }
 
-        //Set wind speed for all observers(clouds)
-        windSubject.setWindSpeed(GameApp.WIND_SPEED);
-
+    void initializePonds() {
         for (int i = 0; i < 3; i++) {
             Pond pond = new Pond();
             ponds.add(pond);
             this.getChildren().add(0, pond);
         }
+    }
 
-        initializeBounds();
-
-        this.getChildren().addAll(helipad, helicopter,
-                helicopterBounds, helipadBounds);
-
+    void createSeedingSound() {
+        seedingSound = new AudioClip(this.getClass()
+                .getResource("\\seedingsound.mp3")
+                .toExternalForm());
+        seedingSound.setVolume(.02);
     }
 
     void moveForward() {
@@ -108,6 +116,7 @@ class Game extends Pane {
         for (Cloud cloud : clouds) {
             if (cloud.getBoundsInParent().intersects(helicopter.getBoundsInParent
                     ())) {
+                seedingSound.play();
                 cloud.seedCloud();
             }
         }
@@ -139,7 +148,7 @@ class Game extends Pane {
     boolean checkWin() {
 
         for (Pond pond : ponds) {
-            if ((int) pond.getWaterPercentage() != 100) {
+            if ((int) pond.getWaterPercentage() < 80) {
                 return false;
             }
         }
@@ -204,7 +213,7 @@ class Game extends Pane {
             Cloud cloudItr = itr.next();
             if (cloudItr.getBoundsInParent().getCenterX() > GameApp.GAME_WIDTH + 60) {
                 itr.remove();
-                this.getChildren().remove(cloudItr);
+               this.getChildren().remove(cloudItr);
             }
         }
     }
@@ -218,7 +227,7 @@ class Game extends Pane {
     }
 
     void createBlimpRandomly() {
-        int max = 3000;
+        int max = 2000;
         int min = 1;
         int range = max - min + 1;
 

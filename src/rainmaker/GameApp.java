@@ -2,7 +2,9 @@ package rainmaker;
 
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
+import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
@@ -15,7 +17,11 @@ public class GameApp extends Application {
 
     final static int GAME_HEIGHT = 800;
     final static int GAME_WIDTH = 800;
-    final static double WIND_SPEED = .5;
+    final static double WIND_SPEED = .3;
+
+    public static void main(String[] args) {
+        launch(args);
+    }
 
     @Override
     public void start(Stage stage) {
@@ -41,12 +47,11 @@ public class GameApp extends Application {
                 game.helicopterBlimpRefuel(delta);
                 game.removeBlimpFromScene();
 
-
                 for (Node n : game.getChildren()) {
-                    if (n instanceof Updatable)
+                    if (n instanceof Updatable) {
                         ((Updatable) n).update(delta);
+                    }
                 }
-
 
                 if (game.checkWin() || game.checkFuelLost()) {
                     handleWinLoss(this, stage, game, scene);
@@ -61,10 +66,6 @@ public class GameApp extends Application {
         stage.setTitle("RainMaker");
         timer.start();
         stage.show();
-    }
-
-    public static void main(String[] args) {
-        launch(args);
     }
 
     void setupWindow(Game game) {

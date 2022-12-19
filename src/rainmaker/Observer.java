@@ -7,7 +7,7 @@ public interface Observer {
 }
 
 class WindSubject implements Subject {
-    private ArrayList<Observer> observers;
+    private final ArrayList<Observer> observers;
     private double windSpeed;
 
     public WindSubject() {
