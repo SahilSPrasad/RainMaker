@@ -1,4 +1,4 @@
-# RainMaker 🌧️🚁
+# RainMaker 🌧️🚁 by Sahil Prasad
 
 RainMaker is a dynamic, interactive 2D helicopter simulation game built with Java and JavaFX. Players control a helicopter to seed clouds and fill ponds with water, while managing fuel and navigating obstacles. The game combines procedural graphics, state-based behavior, and real-time physics for an engaging, educational experience.
 
