@@ -3,6 +3,8 @@
 RainMaker is a dynamic, interactive 2D helicopter simulation game built with Java and JavaFX. Players control a helicopter to seed clouds and fill ponds with water, while managing fuel and navigating obstacles. The game combines procedural graphics, state-based behavior, and real-time physics for an engaging, educational experience.
 
 ---
+<img width="796" height="791" alt="image" src="https://github.com/user-attachments/assets/97fa9fb5-157c-44df-85ee-eaf91ab77c77" />
+
 
 ## Table of Contents
 
